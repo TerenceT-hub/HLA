@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Terence Assurance Tools | Hong Leong Assurance</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="HLA Tools">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+  <style>
+    :root {
+      --bg: #f5f5f7;
+      --card-bg: rgba(255,255,255,0.85);
+      --text: #1d1d1f;
+      --subtext: #6e6e73;
+      --border: #e5e5ea;
+      --blue: #007aff;
+      --green: #34c759;
+      --whatsapp: #25d366;
+      --shadow: 0 20px 40px rgba(0,0,0,0.08);
+      --quote-bg: rgba(255,255,255,0.7);
+      --hla-red: #C8102E;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #000000;
+        --card-bg: rgba(28,28,30,0.85);
+        --text: #f5f5f7;
+        --subtext: #98989d;
+        --border: #38383a;
+        --shadow: 0 20px 40px rgba(0,0,0,0.5);
+        --quote-bg: rgba(44,44,46,0.7);
+      }
+    }
+    body.dark {
+      --bg: #000000;
+      --card-bg: rgba(28,28,30,0.85);
+      --text: #f5f5f7;
+      --subtext: #98989d;
+      --border: #38383a;
+      --shadow: 0 20px 40px rgba(0,0,0,0.5);
+      --quote-bg: rgba(44,44,46,0.7);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 16px;
+      transition: background 0.3s;
+    }
+    .app-container {
+      width: 100%;
+      max-width: 420px;
+      background: var(--card-bg);
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      border-radius: 32px;
+      box-shadow: var(--shadow);
+      padding: 28px 20px 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .hla-badge {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--hla-red);
+      background: rgba(200,16,46,0.1);
+      padding: 4px 10px;
+      border-radius: 12px;
+    }
+    .theme-btn {
+      background: none;
+      border: none;
+      font-size: 20px;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 50%;
+      color: var(--text);
+    }
+    .screen { display: none; flex-direction: column; align-items: center; animation: fadeIn 0.35s ease; }
+    .screen.active { display: flex; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    h1 { font-size: 24px; font-weight: 650; margin-bottom: 4px; text-align: center; }
+    .subtitle { font-size: 15px; color: var(--subtext); text-align: center; margin-bottom: 18px; line-height: 1.4; }
+    .quote-block {
+      background: var(--quote-bg);
+      border-left: 4px solid var(--blue);
+      padding: 14px 16px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      width: 100%;
+      font-style: italic;
+      color: var(--subtext);
+      backdrop-filter: blur(10px);
+    }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      width: 100%;
+      margin-bottom: 16px;
+    }
+    .product-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 18px 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: 0.2s;
+      backdrop-filter: blur(10px);
+    }
+    .product-card:active { transform: scale(0.97); border-color: var(--blue); }
+    .product-icon { font-size: 28px; margin-bottom: 6px; }
+    .product-title { font-weight: 600; font-size: 14px; }
+    .review-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+      width: 100%;
+      text-align: center;
+      margin-bottom: 6px;
+      backdrop-filter: blur(10px);
+      font-size: 15px;
+    }
+    .privacy-note {
+      font-size: 12px;
+      color: var(--subtext);
+      margin-top: 10px;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .btn {
+      background: var(--blue); color: white; border: none; border-radius: 26px;
+      padding: 14px 24px; font-size: 16px; font-weight: 590; cursor: pointer;
+      width: 100%; text-align: center; margin-top: 8px;
+      box-shadow: 0 4px 12px rgba(0,122,255,0.3); transition: 0.2s;
+    }
+    .btn:active { transform: scale(0.97); background: #0066d6; }
+    .btn-outline {
+      background: transparent; color: var(--blue); border: 1.5px solid var(--blue);
+      box-shadow: none;
+    }
+    .btn-small { padding: 10px 18px; font-size: 14px; width: auto; margin-top: 0; }
+    .nav-buttons { display: flex; gap: 10px; width: 100%; margin-top: 12px; flex-wrap: wrap; }
+    .nav-buttons .btn { flex: 1; }
+    .option-card {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 16px;
+      padding: 14px 16px; cursor: pointer; display: flex; align-items: center; gap: 10px;
+      transition: 0.2s; backdrop-filter: blur(10px);
+    }
+    .option-card.selected { border-color: var(--blue); background: rgba(0,122,255,0.08); }
+    .radio-custom {
+      width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border);
+      display: inline-block; flex-shrink: 0;
+    }
+    .option-card.selected .radio-custom { border-color: var(--blue); background: var(--blue); box-shadow: inset 0 0 0 4px white; }
+    .input-group { margin-bottom: 14px; width: 100%; }
+    .input-group label { display: block; font-size: 14px; font-weight: 500; margin-bottom: 6px; color: var(--subtext); }
+    .input-group input, .input-group select {
+      width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: 14px;
+      font-size: 16px; background: var(--card-bg); color: var(--text); outline: none; transition: 0.2s;
+    }
+    .input-group input:focus, .input-group select:focus { border-color: var(--blue); }
+    .result-card { background: var(--card-bg); border-radius: 20px; padding: 20px; width: 100%; border: 1px solid var(--border); margin-bottom: 16px; backdrop-filter: blur(10px); }
+    .disclaimer { font-size: 11px; color: var(--subtext); text-align: center; margin-top: 12px; opacity: 0.8; }
+    .whatsapp-btn { background: var(--whatsapp); color: white; display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .restart-link { margin-top: 12px; color: var(--blue); font-size: 14px; cursor: pointer; }
+  </style>
+</head>
+<body>
+<div class="app-container">
+  <div class="top-bar">
+    <span class="hla-badge">Hong Leong Assurance</span>
+    <button class="theme-btn" id="themeToggle" onclick="toggleTheme()" title="Toggle dark/light mode">🌓</button>
+  </div>
+
+  <!-- Profile Screen -->
+  <div id="screen-profile" class="screen active">
+    <h1>Your Details</h1>
+    <p class="subtitle">I need a few details to give you an accurate quote. Your information is sent only to me via WhatsApp, and securely saved to help me serve you better.</p>
+    <div class="input-group">
+      <label>Full Name</label>
+      <input type="text" id="profileName" placeholder="Ali bin Abu">
+    </div>
+    <div class="input-group">
+      <label>Date of Birth</label>
+      <input type="date" id="profileDOB">
+    </div>
+    <div class="input-group">
+      <label>Gender</label>
+      <select id="profileGender">
+        <option value="">Select</option>
+        <option value="Male">Male</option>
+        <option value="Female">Female</option>
+      </select>
+    </div>
+    <div class="input-group">
+      <label>Occupation</label>
+      <input type="text" id="profileOccupation" placeholder="e.g., Teacher, Engineer, Self-employed">
+    </div>
+    <button class="btn" onclick="saveProfile()">Continue</button>
+    <p class="disclaimer">By continuing, you agree that this information will be sent securely to Terence via WhatsApp for a personalised consultation. We will never call you or share your contact.</p>
+  </div>
+
+  <!-- Landing Screen -->
+  <div id="screen-landing" class="screen">
+    <div class="quote-block">
+      “The best time to protect your family was yesterday. The next best time is now.”
+    </div>
+    <h1>Terence Assurance Tools</h1>
+    <p class="subtitle">Hong Leong Assurance products made simple. Choose what you’d like help with.</p>
+    <div class="grid-2">
+      <div class="product-card" onclick="startModule('medical')">
+        <div class="product-icon">🏥</div>
+        <div class="product-title">Medical Card</div>
+      </div>
+      <div class="product-card" onclick="startModule('life')">
+        <div class="product-icon">👨‍👩‍👧‍👦</div>
+        <div class="product-title">Life Insurance</div>
+      </div>
+      <div class="product-card" onclick="startModule('savings')">
+        <div class="product-icon">💰</div>
+        <div class="product-title">Savings Plan</div>
+      </div>
+      <div class="product-card" onclick="startModule('pa')">
+        <div class="product-icon">🦺</div>
+        <div class="product-title">Personal Accident</div>
+      </div>
+    </div>
+    <div class="review-card">
+      <strong>Confused about your existing policies?</strong><br>
+      <span style="font-size:13px;">We offer free policy review & consolidation.</span><br>
+      <a class="btn btn-small" style="margin-top:8px; display:inline-block;" href="https://wa.me/60126739329?text=Hi%20Terence%2C%20I%20would%20like%20a%20free%20policy%20review%20and%20consolidation." target="_blank">Chat Now</a>
+    </div>
+    <div class="privacy-note">
+      <span>🔒</span> We will never call you or share your contact. All communication strictly via WhatsApp.
+    </div>
+  </div>
+
+  <!-- Quiz Screen -->
+  <div id="screen-quiz" class="screen">
+    <div id="quizContent"></div>
+    <div class="nav-buttons" id="quizNav"></div>
+  </div>
+
+  <!-- Result Screen -->
+  <div id="screen-result" class="screen">
+    <h1 id="resultTitle"></h1>
+    <div class="result-card" id="resultCard"></div>
+    <a class="btn whatsapp-btn" id="waLink" target="_blank">💬 Chat on WhatsApp</a>
+    <div class="restart-link" onclick="goHome()">← Back to Home</div>
+    <div class="disclaimer">This is a personal illustration tool. Not an official HLA application. For formal advice, please contact me directly.</div>
+  </div>
+</div>
+
+<script>
+  // ========== CONFIGURATION ==========
+  const AGENT_NAME = "Terence";
+  const WHATSAPP_NUMBER = "60126739329";
+  
+  // ⚠️ PASTE YOUR GOOGLE SHEETS WEB APP URL HERE:
+  const https://script.google.com/macros/s/AKfycbzSFzcNn0Ph6kfoTizP3O9wlnm1cfPRL3V_PLdlVyemd05jnqIQOuttkTUxszwd_zMHmw/exec = "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec";
+  
+  // ========== THEME ==========
+  let isDark = localStorage.getItem('dark') === 'true';
+  function toggleTheme() { isDark = !isDark; localStorage.setItem('dark', isDark); document.body.classList.toggle('dark', isDark); }
+  if(isDark) document.body.classList.add('dark');
+
+  // ========== PROFILE ==========
+  let profile = { name: '', dob: '', gender: '', occupation: '' };
+
+  if (localStorage.getItem('profileFilled') === 'true') {
+    profile = JSON.parse(localStorage.getItem('profileData') || '{}');
+    showScreen('screen-landing');
+  } else {
+    showScreen('screen-profile');
+  }
+
+  function saveProfile() {
+    const name = document.getElementById('profileName').value.trim();
+    const dob = document.getElementById('profileDOB').value;
+    const gender = document.getElementById('profileGender').value;
+    const occupation = document.getElementById('profileOccupation').value.trim();
+
+    if (!name || !dob || !gender || !occupation) {
+      alert('Please fill in all fields for an accurate recommendation.');
+      return;
+    }
+
+    profile = { name, dob, gender, occupation };
+    localStorage.setItem('profileFilled', 'true');
+    localStorage.setItem('profileData', JSON.stringify(profile));
+    showScreen('screen-landing');
+  }
+
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+  function goHome() { showScreen('screen-landing'); currentModule = null; }
+
+  // ========== MODULES ==========
+  let currentModule = null;
+  let stepIndex = 0;
+  let existing = null;
+  let answers = {};
+
+  const modules = {
+    medical: {
+      title: "Medical Card",
+      steps: {
+        initial: [
+          { id: 'existing', type: 'choice', question: "Do you currently have a medical card?", options: ['Yes', 'No'] }
+        ],
+        existing_yes: [
+          { id: 'current', type: 'number', question: "What is your current annual limit? (RM)", placeholder: "e.g., 100000" },
+          { id: 'expected', type: 'number', question: "What annual limit are you expecting? (RM)", placeholder: "e.g., 500000" },
+          { id: 'budget', type: 'number', question: "Monthly budget for upgrade? (RM)", placeholder: "e.g., 200" }
+        ],
+        existing_no: [
+          { id: 'budget', type: 'number', question: "What is your monthly budget? (RM)", placeholder: "e.g., 150" },
+          { id: 'expected', type: 'number', question: "What annual limit do you expect? (RM)", placeholder: "e.g., 300000" }
+        ]
+      },
+      result: (a) => {
+        if (a.existing === 'Yes') {
+          return `Existing annual limit: RM ${parseFloat(a.current).toLocaleString()}<br>Desired limit: RM ${parseFloat(a.expected).toLocaleString()}<br>Budget: RM ${a.budget}/month<br><strong>We can find an upgrade that fits.</strong>`;
+        } else {
+          return `You're looking for RM ${parseFloat(a.expected).toLocaleString()} annual limit, budget around RM ${a.budget}/month.<br><strong>We have suitable plans available.</strong>`;
+        }
+      }
+    },
+    life: {
+      title: "Life Insurance",
+      steps: {
+        initial: [
+          { id: 'existing', type: 'choice', question: "Do you currently have life insurance?", options: ['Yes', 'No'] }
+        ],
+        existing_yes: [
+          { id: 'current', type: 'number', question: "Current life cover amount? (RM)", placeholder: "e.g., 200000" },
+          { id: 'expected', type: 'number', question: "Total cover you expect? (RM)", placeholder: "e.g., 500000" },
+          { id: 'budget', type: 'number', question: "Monthly budget for additional cover? (RM)", placeholder: "e.g., 100" }
+        ],
+        existing_no: [
+          { id: 'expected', type: 'number', question: "How much life coverage do you expect? (RM)", placeholder: "e.g., 300000" },
+          { id: 'budget', type: 'number', question: "Monthly budget? (RM)", placeholder: "e.g., 100" }
+        ]
+      },
+      result: (a) => {
+        if (a.existing === 'Yes') {
+          return `Current cover: RM ${parseFloat(a.current).toLocaleString()}<br>Desired cover: RM ${parseFloat(a.expected).toLocaleString()}<br>Budget: RM ${a.budget}/month<br><strong>Let's top up your protection.</strong>`;
+        } else {
+          return `You're aiming for RM ${parseFloat(a.expected).toLocaleString()} life cover, budget RM ${a.budget}/month.<br><strong>We can build a plan for you.</strong>`;
+        }
+      }
+    },
+    savings: {
+      title: "Savings Plan",
+      steps: {
+        initial: [
+          { id: 'existing', type: 'choice', question: "Do you have an existing savings plan?", options: ['Yes', 'No'] }
+        ],
+        existing_yes: [
+          { id: 'current', type: 'number', question: "How much savings have you accumulated so far? (RM)", placeholder: "e.g., 20000" },
+          { id: 'expected', type: 'number', question: "What is your target savings amount? (RM)", placeholder: "e.g., 100000" },
+          { id: 'budget', type: 'number', question: "Monthly contribution for new goal? (RM)", placeholder: "e.g., 500" }
+        ],
+        existing_no: [
+          { id: 'expected', type: 'number', question: "What is your target savings amount? (RM)", placeholder: "e.g., 50000" },
+          { id: 'budget', type: 'number', question: "Monthly budget for savings? (RM)", placeholder: "e.g., 300" }
+        ]
+      },
+      result: (a) => {
+        if (a.existing === 'Yes') {
+          return `Current savings: RM ${parseFloat(a.current).toLocaleString()}<br>Target: RM ${parseFloat(a.expected).toLocaleString()}<br>Monthly contribution: RM ${a.budget}/month<br><strong>Let's accelerate your savings.</strong>`;
+        } else {
+          return `Goal: RM ${parseFloat(a.expected).toLocaleString()}, with RM ${a.budget}/month.<br><strong>Start your disciplined savings now.</strong>`;
+        }
+      }
+    },
+    pa: {
+      title: "Personal Accident",
+      steps: {
+        initial: [
+          { id: 'existing', type: 'choice', question: "Do you have an existing PA policy?", options: ['Yes', 'No'] }
+        ],
+        existing_yes: [
+          { id: 'current', type: 'number', question: "Current PA cover amount? (RM)", placeholder: "e.g., 50000" },
+          { id: 'expected', type: 'number', question: "Total PA cover you expect? (RM)", placeholder: "e.g., 200000" },
+          { id: 'budget', type: 'number', question: "Monthly budget for additional cover? (RM)", placeholder: "e.g., 30" }
+        ],
+        existing_no: [
+          { id: 'expected', type: 'number', question: "Expected PA cover amount? (RM)", placeholder: "e.g., 100000" },
+          { id: 'budget', type: 'number', question: "Monthly budget? (RM)", placeholder: "e.g., 30" }
+        ]
+      },
+      result: (a) => {
+        if (a.existing === 'Yes') {
+          return `Current PA cover: RM ${parseFloat(a.current).toLocaleString()}<br>Desired: RM ${parseFloat(a.expected).toLocaleString()}<br>Budget: RM ${a.budget}/month<br><strong>We'll boost your accident protection.</strong>`;
+        } else {
+          return `You're aiming for RM ${parseFloat(a.expected).toLocaleString()} PA cover, budget RM ${a.budget}/month.<br><strong>Affordable plans available.</strong>`;
+        }
+      }
+    }
+  };
+
+  // ========== QUIZ FLOW ==========
+  function startModule(moduleKey) {
+    currentModule = moduleKey;
+    stepIndex = 0;
+    existing = null;
+    answers = {};
+    renderStep();
+  }
+
+  function getCurrentSteps() {
+    const mod = modules[currentModule];
+    if (existing === null) return mod.steps.initial;
+    else if (existing === true) return mod.steps.existing_yes;
+    else return mod.steps.existing_no;
+  }
+
+  function renderStep() {
+    const mod = modules[currentModule];
+    const stepsConfig = getCurrentSteps();
+    if (!stepsConfig || stepIndex >= stepsConfig.length) {
+      showResult();
+      return;
+    }
+
+    const step = stepsConfig[stepIndex];
+    const quizContent = document.getElementById('quizContent');
+    quizContent.innerHTML = '';
+
+    const titleEl = document.createElement('h1');
+    titleEl.textContent = mod.title;
+    quizContent.appendChild(titleEl);
+
+    const qEl = document.createElement('p');
+    qEl.className = 'subtitle';
+    qEl.textContent = step.question;
+    quizContent.appendChild(qEl);
+
+    if (step.type === 'choice') {
+      const optionsDiv = document.createElement('div');
+      optionsDiv.className = 'grid-2';
+      step.options.forEach(opt => {
+        const card = document.createElement('div');
+        card.className = 'option-card';
+        card.innerHTML = `<span class="radio-custom"></span> ${opt}`;
+        card.onclick = () => {
+          optionsDiv.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+          card.classList.add('selected');
+          answers[step.id] = opt;
+          document.getElementById('nextBtn').disabled = false;
+        };
+        optionsDiv.appendChild(card);
+      });
+      quizContent.appendChild(optionsDiv);
+    } else if (step.type === 'number') {
+      const inputGroup = document.createElement('div');
+      inputGroup.className = 'input-group';
+      const label = document.createElement('label');
+      label.textContent = step.question;
+      const input = document.createElement('input');
+      input.type = 'number';
+      input.placeholder = step.placeholder || '';
+      input.id = 'stepInput';
+      input.oninput = () => {
+        answers[step.id] = input.value;
+        document.getElementById('nextBtn').disabled = !input.value;
+      };
+      if (answers[step.id]) input.value = answers[step.id];
+      inputGroup.appendChild(label);
+      inputGroup.appendChild(input);
+      quizContent.appendChild(inputGroup);
+    }
+
+    const nav = document.getElementById('quizNav');
+    nav.innerHTML = '';
+
+    const backBtn = document.createElement('button');
+    backBtn.className = 'btn btn-outline';
+    backBtn.textContent = '← Prev';
+    backBtn.onclick = prevStep;
+    if (existing === null && stepIndex === 0) backBtn.disabled = true;
+    nav.appendChild(backBtn);
+
+    const nextBtn = document.createElement('button');
+    nextBtn.className = 'btn';
+    nextBtn.textContent = 'Next →';
+    nextBtn.id = 'nextBtn';
+    nextBtn.disabled = true;
+    if (answers[step.id]) nextBtn.disabled = false;
+    nextBtn.onclick = nextStep;
+    nav.appendChild(nextBtn);
+
+    const homeBtn = document.createElement('button');
+    homeBtn.className = 'btn btn-outline';
+    homeBtn.textContent = 'Home';
+    homeBtn.onclick = goHome;
+    homeBtn.style.flex = '0 0 auto';
+    homeBtn.style.width = 'auto';
+    homeBtn.style.padding = '10px 14px';
+    homeBtn.style.marginTop = '0';
+    nav.appendChild(homeBtn);
+
+    showScreen('screen-quiz');
+  }
+
+  function nextStep() {
+    const stepsConfig = getCurrentSteps();
+    if (stepIndex < stepsConfig.length - 1) {
+      stepIndex++;
+      renderStep();
+    } else {
+      if (existing === null && answers.existing) {
+        existing = answers.existing === 'Yes';
+        stepIndex = 0;
+        renderStep();
+        return;
+      }
+      showResult();
+    }
+  }
+
+  function prevStep() {
+    if (existing === null) {
+      if (stepIndex > 0) stepIndex--;
+    } else {
+      if (stepIndex > 0) {
+        stepIndex--;
+      } else {
+        existing = null;
+        stepIndex = 0;
+      }
+    }
+    renderStep();
+  }
+
+  function showResult() {
+    const mod = modules[currentModule];
+    const resultHtml = mod.result(answers);
+    document.getElementById('resultTitle').textContent = mod.title + ' Summary';
+    document.getElementById('resultCard').innerHTML = `<p style="line-height:1.6;">${resultHtml}</p>`;
+
+    // WhatsApp
+    let msg = `Hi ${Terence}, I used your ${mod.title} tool.\n\n`;
+    msg += `*My details:*\nName: ${profile.name}\nDOB: ${profile.dob}\nGender: ${profile.gender}\nOccupation: ${profile.occupation}\n\n`;
+    msg += `*${mod.title} answers:*\n`;
+    for (const [key, value] of Object.entries(answers)) {
+      msg += `${key}: ${value}\n`;
+    }
+    msg += `\nCould you suggest a suitable plan?`;
+    document.getElementById('waLink').href = `https://wa.me/${+60126739328}?text=${encodeURIComponent(msg)}`;
+
+    // Google Sheets
+    sendToGoogleSheets(profile, currentModule, answers);
+
+    showScreen('screen-result');
+  }
+
+  // ========== GOOGLE SHEETS INTEGRATION ==========
+  async function sendToGoogleSheets(profile, module, answers) {
+    if (!https://script.google.com/macros/s/AKfycbzSFzcNn0Ph6kfoTizP3O9wlnm1cfPRL3V_PLdlVyemd05jnqIQOuttkTUxszwd_zMHmw/exec || https://script.google.com/macros/s/AKfycbzSFzcNn0Ph6kfoTizP3O9wlnm1cfPRL3V_PLdlVyemd05jnqIQOuttkTUxszwd_zMHmw/exec.includes('YOUR_DEPLOYMENT_ID')) {
+      console.warn('Google Sheets URL not configured. Skipping save.');
+      return;
+    }
+
+    const payload = {
+      name: profile.name,
+      dob: profile.dob,
+      gender: profile.gender,
+      occupation: profile.occupation,
+      module: module,
+      existing: answers.existing || '',
+      current: answers.current || '',
+      expected: answers.expected || '',
+      budget: answers.budget || ''
+    };
+
+    try {
+      await fetch(https://script.google.com/macros/s/AKfycbzSFzcNn0Ph6kfoTizP3O9wlnm1cfPRL3V_PLdlVyemd05jnqIQOuttkTUxszwd_zMHmw/exec, {
+        method: 'POST',
+        mode: 'no-cors', // no-cors to avoid CORS issues; Google Apps Script will still receive the data
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      console.log('Lead saved to Google Sheets.');
+    } catch (error) {
+      console.error('Failed to save to Sheets:', error);
+    }
+  }
+</script>
+</body>
+</html>
