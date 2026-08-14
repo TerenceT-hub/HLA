@@ -520,32 +520,182 @@ function monthKey(dateStr){
   if(isNaN(d)) return null;
   return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
 }
+
+function dayKey(dateStr){
+  if(!dateStr) return null;
+  const d = new Date(dateStr);
+  if(isNaN(d)) return null;
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+
 function monthLabel(key){
   const [y,m] = key.split('-');
   const d = new Date(Number(y), Number(m)-1, 1);
   return d.toLocaleDateString('en-US', { month:'long', year:'numeric' });
 }
+
+function dayLabel(key){
+  const [y,m,d] = key.split('-');
+  const date = new Date(Number(y), Number(m)-1, Number(d));
+  return date.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+}
+
 function renderRevenue(){
   const byMonth = {};
-  let grandTotal = 0, grandCount = 0;
+  const byDay = {};
+  let grandTotal = 0, grandCount = 0, grandDiscount = 0, grandDiscountCount = 0;
+  
   state.records.forEach(r=>{
     const charge = parseFloat(r['Charges']) || 0;
-    const key = monthKey(r['Date of Grooming']) || 'unspecified';
-    if(!byMonth[key]) byMonth[key] = { total:0, count:0 };
-    byMonth[key].total += charge;
-    byMonth[key].count += 1;
+    const basePrice = parseFloat(r['Base Price']) || 0;
+    const discount = parseFloat(r['Discount (%)']) || 0;
+    const discountAmount = basePrice * (discount / 100);
+    const hasDiscount = discount > 0;
+    
+    const monthKeyStr = monthKey(r['Date of Grooming']) || 'unspecified';
+    const dayKeyStr = dayKey(r['Date of Grooming']) || 'unspecified';
+    
+    // Month aggregation
+    if(!byMonth[monthKeyStr]) byMonth[monthKeyStr] = { 
+      total: 0, 
+      count: 0, 
+      discountTotal: 0, 
+      discountCount: 0,
+      baseTotal: 0
+    };
+    byMonth[monthKeyStr].total += charge;
+    byMonth[monthKeyStr].count += 1;
+    byMonth[monthKeyStr].baseTotal += basePrice;
+    if(hasDiscount) {
+      byMonth[monthKeyStr].discountTotal += discountAmount;
+      byMonth[monthKeyStr].discountCount += 1;
+    }
+    
+    // Day aggregation
+    if(dayKeyStr !== 'unspecified') {
+      if(!byDay[dayKeyStr]) byDay[dayKeyStr] = { 
+        total: 0, 
+        count: 0, 
+        discountTotal: 0, 
+        discountCount: 0,
+        baseTotal: 0,
+        records: []
+      };
+      byDay[dayKeyStr].total += charge;
+      byDay[dayKeyStr].count += 1;
+      byDay[dayKeyStr].baseTotal += basePrice;
+      if(hasDiscount) {
+        byDay[dayKeyStr].discountTotal += discountAmount;
+        byDay[dayKeyStr].discountCount += 1;
+      }
+      byDay[dayKeyStr].records.push({
+        dogName: r['Dog Name'] || 'Unnamed',
+        charge: charge,
+        discount: discount,
+        discountAmount: discountAmount,
+        hasDiscount: hasDiscount
+      });
+    }
+    
     grandTotal += charge;
     grandCount += 1;
+    if(hasDiscount) {
+      grandDiscount += discountAmount;
+      grandDiscountCount += 1;
+    }
   });
+  
   const months = Object.keys(byMonth).filter(k=>k!=='unspecified').sort().reverse();
+  const days = Object.keys(byDay).filter(k=>k!=='unspecified').sort().reverse().slice(0, 30); // Last 30 days
   const avg = grandCount ? (grandTotal/grandCount) : 0;
+  const avgDiscount = grandDiscountCount ? (grandDiscount/grandDiscountCount) : 0;
+  const discountRate = grandTotal ? ((grandDiscount / grandTotal) * 100) : 0;
+  
+  let html = `
+    <!-- Summary Stats -->
+    <div class="revenue-summary">
+      <div class="stat"><div class="eyebrow">Total Revenue</div><div class="num">₱${grandTotal.toFixed(2)}</div></div>
+      <div class="stat"><div class="eyebrow">Total Records</div><div class="num">${grandCount}</div></div>
+      <div class="stat"><div class="eyebrow">Avg. per Groom</div><div class="num">₱${avg.toFixed(2)}</div></div>
+    </div>
+    
+    <!-- Discount Stats -->
+    <div class="revenue-summary" style="margin-bottom:24px;">
+      <div class="stat"><div class="eyebrow">Total Discounts Given</div><div class="num" style="color:var(--clay);">₱${grandDiscount.toFixed(2)}</div></div>
+      <div class="stat"><div class="eyebrow">Avg. Discount per Groom</div><div class="num" style="color:var(--clay);">₱${avgDiscount.toFixed(2)}</div></div>
+      <div class="stat"><div class="eyebrow">Discount Rate</div><div class="num" style="color:var(--clay);">${discountRate.toFixed(1)}%</div></div>
+    </div>
+  `;
 
-  let html = `<div class="revenue-summary">
-    <div class="stat"><div class="eyebrow">Total Revenue</div><div class="num"> ${grandTotal.toFixed(2)}</div></div>
-    <div class="stat"><div class="eyebrow">Total Records</div><div class="num">${grandCount}</div></div>
-    <div class="stat"><div class="eyebrow">Avg. per Groom</div><div class="num"> ${avg.toFixed(2)}</div></div>
-  </div>`;
+  // Monthly trend chart (simplified bar chart)
+  if(months.length > 0){
+    const maxTotal = Math.max(...months.map(k => byMonth[k].total), 1);
+    html += `<div style="margin-bottom:24px;">
+      <h3 style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:12px;">Monthly Revenue Trend</h3>
+      <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:20px;overflow-x:auto;">
+        <div style="display:flex;align-items:flex-end;gap:8px;min-height:200px;padding-bottom:30px;position:relative;">
+          ${months.slice(0,12).map(k => {
+            const data = byMonth[k];
+            const height = (data.total / maxTotal) * 160;
+            const hasDiscount = data.discountTotal > 0;
+            return `
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:40px;">
+                <div style="width:100%;display:flex;flex-direction:column;align-items:center;gap:2px;">
+                  ${hasDiscount ? `<div style="width:24px;height:${(data.discountTotal / maxTotal) * 160}px;background:var(--clay-soft);border-radius:2px 2px 0 0;opacity:0.7;"></div>` : ''}
+                  <div style="width:${hasDiscount ? '24px' : '32px'};height:${height}px;background:${hasDiscount ? 'var(--sage)' : 'var(--sage-soft)'};border-radius:2px 2px 0 0;position:relative;">
+                    <span style="position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--ink-soft);white-space:nowrap;">₱${data.total.toFixed(0)}</span>
+                  </div>
+                </div>
+                <div style="font-size:10px;color:var(--ink-soft);text-align:center;margin-top:4px;">${monthLabel(k).slice(0,3)}</div>
+                <div style="font-size:9px;color:var(--ink-soft);">${data.count}</div>
+                ${hasDiscount ? `<div style="font-size:8px;color:var(--clay);">-₱${data.discountTotal.toFixed(0)}</div>` : ''}
+              </div>
+            `;
+          }).join('')}
+        </div>
+        <div style="display:flex;gap:16px;justify-content:center;font-size:11px;color:var(--ink-soft);border-top:1px solid var(--line-soft);padding-top:12px;margin-top:8px;">
+          <span><span style="display:inline-block;width:12px;height:12px;background:var(--sage);border-radius:2px;vertical-align:middle;margin-right:4px;"></span> Revenue</span>
+          <span><span style="display:inline-block;width:12px;height:12px;background:var(--clay-soft);border-radius:2px;vertical-align:middle;margin-right:4px;"></span> Discounts</span>
+        </div>
+      </div>
+    </div>`;
+  }
 
+  // Recent daily breakdown
+  if(days.length > 0){
+    html += `<div style="margin-bottom:24px;">
+      <h3 style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:12px;">Recent Daily Breakdown</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        ${days.slice(0,14).map(k => {
+          const data = byDay[k];
+          const discountPercentage = data.baseTotal ? ((data.discountTotal / data.baseTotal) * 100) : 0;
+          return `
+            <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;">
+              <div style="font-weight:500;font-size:13px;margin-bottom:4px;">${dayLabel(k)}</div>
+              <div style="display:flex;justify-content:space-between;font-size:13px;">
+                <span>Revenue: <strong>₱${data.total.toFixed(2)}</strong></span>
+                <span style="color:var(--ink-soft);">${data.count} groom${data.count > 1 ? 's' : ''}</span>
+              </div>
+              ${data.discountTotal > 0 ? `
+                <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--clay);margin-top:2px;">
+                  <span>Discounts: ₱${data.discountTotal.toFixed(2)}</span>
+                  <span>${discountPercentage.toFixed(1)}% off</span>
+                </div>
+              ` : `<div style="font-size:11px;color:var(--ink-soft);margin-top:2px;">No discounts given</div>`}
+              <div style="margin-top:6px;font-size:11px;color:var(--ink-soft);">
+                ${data.records.slice(0,3).map(r => 
+                  `${r.dogName}${r.hasDiscount ? ' ✨' : ''}`
+                ).join(' · ')}
+                ${data.records.length > 3 ? ` +${data.records.length - 3} more` : ''}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    </div>`;
+  }
+
+  // Monthly details table
   if(months.length === 0){
     html += `<div class="card empty-state"><div class="stamp">犬</div>
       <div style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:6px;">No revenue yet</div>
@@ -554,22 +704,39 @@ function renderRevenue(){
     return html;
   }
 
-  html += months.map(k=>`
-    <div class="month-row">
-      <div>
-        <div class="m-label">${esc(monthLabel(k))}</div>
-        <div class="m-meta">${byMonth[k].count} record${byMonth[k].count===1?'':'s'}</div>
-      </div>
-      <div class="m-total"> ${byMonth[k].total.toFixed(2)}</div>
-    </div>`).join('');
+  html += `<div style="margin-bottom:24px;">
+    <h3 style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:12px;">Monthly Details</h3>
+    ${months.map(k => {
+      const data = byMonth[k];
+      const discountPercentage = data.baseTotal ? ((data.discountTotal / data.baseTotal) * 100) : 0;
+      return `
+        <div class="month-row">
+          <div>
+            <div class="m-label">${esc(monthLabel(k))}</div>
+            <div class="m-meta">${data.count} record${data.count===1?'':'s'} · ${data.discountCount} with discount${data.discountCount !== 1 ? 's' : ''}</div>
+            ${data.discountTotal > 0 ? `<div class="m-meta" style="color:var(--clay);">Discounts: ₱${data.discountTotal.toFixed(2)} (${discountPercentage.toFixed(1)}%)</div>` : ''}
+          </div>
+          <div style="text-align:right;">
+            <div class="m-total">₱${data.total.toFixed(2)}</div>
+            ${data.discountTotal > 0 ? `<div style="font-size:11px;color:var(--clay);">-₱${data.discountTotal.toFixed(2)}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('')}
+  </div>`;
 
   if(byMonth['unspecified']){
     html += `<div class="month-row">
       <div><div class="m-label">Undated records</div><div class="m-meta">${byMonth['unspecified'].count} record(s) without a grooming date</div></div>
-      <div class="m-total"> ${byMonth['unspecified'].total.toFixed(2)}</div>
+      <div class="m-total">₱${byMonth['unspecified'].total.toFixed(2)}</div>
     </div>`;
   }
   return html;
+}
+
+  /* Revenue trend enhancements */
+.revenue-summary .stat .num.clay {
+  color: var(--clay);
 }
 
 /* ---- PDF export ---- */
