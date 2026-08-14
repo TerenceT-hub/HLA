@@ -607,7 +607,7 @@ function exportRecordAsPdf(r){
     ${r['Style Notes'] ? `<div style="font-size:13px;margin-top:8px;"><span class="k" style="color:#777;font-size:10.5px;text-transform:uppercase;">Style Notes</span>${esc(r['Style Notes'])}</div>` : ''}
     ${r['Additional Notes'] ? `<div style="font-size:13px;margin-top:8px;"><span class="k" style="color:#777;font-size:10.5px;text-transform:uppercase;">Additional Notes</span>${esc(r['Additional Notes'])}</div>` : ''}
     <div class="p-charge"><span>Total Charges</span><span> ${r['Charges'] ? parseFloat(r['Charges']).toFixed(2) : '0.00'}</span></div>
-    <div class="p-footer">Thank you for trusting ${esc(BUSINESS_NAME)} with your dog's grooming.</div>
+    <div class="p-footer">${esc(BUSINESS_NAME)} | More than a haircut - A calm and comfortable grooming experience.</div>
   </div>`;
   window.print();
 }
