@@ -958,11 +958,21 @@ function attachHandlers(){
 function collectFormData(){
   const d = state.formData;
   const map = {
-    'Dog Name':'f_DogName','Owner Name':'f_OwnerName','Date of Grooming':'f_Date','Breed':'f_Breed','Weight (kg)':'f_Weight',
-    'Style Notes':'f_StyleNotes','Additional Notes':'f_AdditionalNotes','Service Notes':'f_ServiceNotes',
-    'Charges':'f_Charges','Base Price':'f_BasePrice','Discount (%)':'f_Discount','Discount Notes':'f_DiscountNotes',
-    'Temperament Notes':'f_TemperamentNotes','Shampoo Notes':'f_ShampooNotes'
-  };
+  'Dog Name':'f_DogName',
+  'Owner Name':'f_OwnerName',
+  'Date of Grooming':'f_Date',
+  'Breed':'f_Breed',
+  'Weight (kg)':'f_Weight',
+  'Style Notes':'f_StyleNotes',
+  'Additional Notes':'f_AdditionalNotes',
+  'Service Notes':'f_ServiceNotes',
+  'Charges':'f_Charges',
+  'Base Price':'f_BasePrice',
+  'Discount (%)':'f_Discount',
+  'Discount Notes':'f_DiscountNotes',  // Make sure this is here
+  'Temperament Notes':'f_TemperamentNotes',
+  'Shampoo Notes':'f_ShampooNotes'
+};
   PRE_ASSESSMENT.forEach(cat=>{ map[cat.key+' Notes'] = 'f_'+cat.key+'Notes'; });
   Object.entries(map).forEach(([k,id])=>{
     const el = document.getElementById(id);
