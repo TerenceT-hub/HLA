@@ -49,7 +49,6 @@
   button{font-family:inherit;cursor:pointer;}
   input,select,textarea{font-family:inherit;font-size:15px;}
 
-  /* ---- Shell ---- */
   .topbar{
     border-bottom:1px solid var(--line);
     background:var(--paper);
@@ -88,16 +87,13 @@
     border-radius:var(--radius);
     box-shadow:var(--shadow);
   }
-  
 
-  /* ---- Config banner ---- */
   .config-banner{
     background:var(--gold-soft);border:1px solid var(--gold);color:#6b5620;
     padding:14px 18px;border-radius:var(--radius);font-size:13.5px;margin-bottom:24px;
   }
   .config-banner code{background:rgba(0,0,0,.06);padding:1px 5px;border-radius:2px;}
 
-  /* ---- Section ---- */
   .section{padding:28px 28px;}
   .section + .section{border-top:1px solid var(--line-soft);}
   .section-title{display:flex;align-items:baseline;gap:10px;margin-bottom:18px;}
@@ -117,7 +113,6 @@
   .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
   @media(max-width:640px){.row,.row3{grid-template-columns:1fr;}}
 
-  /* ---- Pill select (signature component) ---- */
   .pill-group{display:flex;flex-wrap:wrap;gap:8px;}
   .pill{
     border:1px solid var(--line);background:#fff;color:var(--ink-soft);
@@ -137,7 +132,6 @@
   .assess-note{margin-top:10px;}
   .assess-note input{font-size:13px;padding:8px 11px;}
 
-  /* shampoo option card */
   .shampoo-option{
     border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;
     cursor:pointer;transition:all .12s ease;
@@ -147,7 +141,6 @@
   .shampoo-option .name{font-size:13.5px;font-weight:500;}
   .shampoo-option .desc{font-size:12px;color:var(--ink-soft);margin-top:2px;}
 
-  /* ---- Buttons ---- */
   .btn{
     display:inline-flex;align-items:center;gap:8px;
     padding:11px 22px;border-radius:999px;border:1px solid var(--ink);
@@ -160,7 +153,6 @@
   .btn.danger:hover{background:var(--clay-soft);}
   .form-actions{display:flex;justify-content:space-between;align-items:center;padding:22px 28px;border-top:1px solid var(--line);gap:12px;flex-wrap:wrap;}
 
-  /* ---- List view ---- */
   .list-toolbar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:center;justify-content:space-between;}
   .search-box{position:relative;flex:1;min-width:220px;}
   .search-box input{width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:999px;background:#fff;outline:none;}
@@ -185,7 +177,6 @@
     display:flex;align-items:center;justify-content:center;color:var(--line);font-size:20px;
   }
 
-  /* ---- Detail view ---- */
   .detail-header{display:flex;justify-content:space-between;align-items:flex-start;padding:26px 28px;border-bottom:1px solid var(--line);gap:16px;flex-wrap:wrap;}
   .detail-header h2{font-size:22px;}
   .detail-header .sub{color:var(--ink-soft);font-size:13px;margin-top:4px;}
@@ -210,7 +201,6 @@
 
   .brand-mark img.logo{width:68px;height:68px;border-radius:50%;object-fit:cover;flex-shrink:0;}
 
-  /* ---- Revenue tab ---- */
   .revenue-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:0;margin-bottom:24px;overflow:hidden;border-radius:var(--radius);border:1px solid var(--line);}
   @media(max-width:640px){.revenue-summary{grid-template-columns:1fr;}}
   .revenue-summary .stat{background:#fff;padding:22px 24px;}
@@ -222,7 +212,7 @@
   .month-row .m-label{font-weight:500;font-size:14.5px;}
   .month-row .m-meta{font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
   .month-row .m-total{font-family:'Shippori Mincho',serif;font-size:17px;color:var(--sage);}
-    /* ---- Revenue trend enhancements ---- */
+
   .revenue-summary .stat .num.clay {
     color: var(--clay);
   }
@@ -400,7 +390,26 @@
     font-size:16px;
     margin-bottom:12px;
   }
-  /* ---- Print / PDF export ---- */
+
+  /* Photo upload styles */
+  .photo-upload-area {
+    border:2px dashed var(--line);
+    border-radius:var(--radius);
+    padding:12px;
+    text-align:center;
+    cursor:pointer;
+    transition:all .15s;
+    background:#fafaf8;
+  }
+  .photo-upload-area:hover {
+    border-color:var(--sage);
+    background:var(--sage-soft);
+  }
+  .photo-upload-area.dragover {
+    border-color:var(--sage);
+    background:var(--sage-soft);
+  }
+
   #printArea{display:none;}
   @media print{
     body > *:not(#printArea){display:none !important;}
@@ -441,20 +450,12 @@
 <main id="app"></main>
 
 <div class="toast" id="toast"></div>
-
-<!-- Printable record area: only visible when printing/exporting a PDF -->
 <div id="printArea"></div>
 
 <script>
 /* ======================= CONFIGURATION ======================= */
-// Paste the Web App URL you get from deploying Code.gs here:
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMbFKSzcX0-oLGIOuPVN_X1O4pSlZXkdXE2taYWkABR1vxFdKmce-jFHXlLMZtyP4YBQ/exec";
 
-// Branding — shown in the top bar and on exported PDFs.
-// BUSINESS_NAME: change to your business name.
-// LOGO_URL: upload your logo image into the same GitHub repo as this file
-// (e.g. logo.png) and set this to "logo.png" — or paste a full image URL.
-// Leave LOGO_URL as "" to keep the default paw stamp instead.
 const BUSINESS_NAME = "Mollie Pet";
 const LOGO_URL = "logo.png";
 /* ================================================================ */
@@ -500,8 +501,7 @@ function initBranding(){
   }
 }
 
-/* ------------------------- API ------------------------- */
-function configured(){ return APPS_SCRIPT_URL && APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === -1; }
+function configured(){ return APPS_SCRIPT_URL && APPS_SCRIPT_URL.indexOf('YOUR_WEB_APP_URL_HERE') === -1; }
 
 async function apiList(){
   const res = await fetch(APPS_SCRIPT_URL + '?action=list');
@@ -521,8 +521,28 @@ async function apiDelete(id){
   const res = await fetch(APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify({action:'delete', id}) });
   return res.json();
 }
+async function uploadCategoryPhoto(recordId, category, files) {
+  const formData = new FormData();
+  formData.append('recordId', recordId);
+  formData.append('category', category);
+  
+  for (let i = 0; i < files.length; i++) {
+    formData.append('photo', files[i]);
+  }
+  
+  try {
+    const response = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      body: formData,
+    });
+    const result = await response.json();
+    return result;
+  } catch (err) {
+    console.error('Upload error:', err);
+    throw err;
+  }
+}
 
-/* ------------------------- Helpers ------------------------- */
 function showToast(msg){
   const t = document.getElementById('toast');
   t.textContent = msg;
@@ -543,7 +563,6 @@ async function refreshRecords(){
   state.loading = false; render();
 }
 
-/* ------------------------- Rendering ------------------------- */
 function render(){
   document.querySelectorAll('nav.tabs button').forEach(b=>{
     b.classList.toggle('active', b.dataset.tab === state.tab || (state.tab==='detail' && b.dataset.tab==='list') || (state.tab==='edit' && b.dataset.tab==='form'));
@@ -553,7 +572,7 @@ function render(){
     app.innerHTML = configBanner() + emptyConfigState();
     return;
   }
-  if(state.tab === 'list') app.innerHTML = configBannerIfNeeded() + renderList();
+  if(state.tab === 'list') app.innerHTML = renderList();
   else if(state.tab === 'detail') app.innerHTML = renderDetail();
   else if(state.tab === 'form' || state.tab === 'edit') app.innerHTML = renderForm();
   else if(state.tab === 'revenue') app.innerHTML = renderRevenue();
@@ -566,7 +585,6 @@ function configBanner(){
     then paste the Web App URL into <code>APPS_SCRIPT_URL</code> near the top of this file's script.
   </div>`;
 }
-function configBannerIfNeeded(){ return ''; }
 function emptyConfigState(){
   return `<div class="card empty-state"><div class="stamp">犬</div>
     <div style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:6px;">Not connected yet</div>
@@ -574,7 +592,6 @@ function emptyConfigState(){
   </div>`;
 }
 
-/* ---- List ---- */
 function renderList(){
   if(state.loading) return `<div class="loading">Loading records…</div>`;
   const q = state.search.trim().toLowerCase();
@@ -614,7 +631,6 @@ function renderList(){
   return html;
 }
 
-/* ---- Detail ---- */
 function renderDetail(){
   const r = state.records.find(x=>x['Record ID']===state.detailId);
   if(!r) return `<div class="empty-state">Record not found.</div>`;
@@ -658,8 +674,43 @@ function renderDetail(){
     <div class="section" style="padding-top:6px;">
       <div class="section-title"><span class="num">01</span><h2>Pre-Assessment</h2></div>
       <div class="detail-grid">
-        ${PRE_ASSESSMENT.map(cat => tagItem(cat.label, cat.key, cat.options) + (r[cat.key+' Notes'] ? `<div class="detail-item"><label>${esc(cat.label)} Notes</label><div class="val">${esc(r[cat.key+' Notes'])}</div></div>` : '')).join('')}
-        ${tagItem('Mats', 'Mats', MATS.options)}
+        ${PRE_ASSESSMENT.map(cat => {
+          const photos = (r[cat.key+' Photos'] || '').split(',').filter(Boolean);
+          return `
+            ${tagItem(cat.label, cat.key, cat.options)}
+            ${r[cat.key+' Notes'] ? `<div class="detail-item"><label>${esc(cat.label)} Notes</label><div class="val">${esc(r[cat.key+' Notes'])}</div></div>` : ''}
+            ${photos.length > 0 ? `
+              <div class="detail-item" style="grid-column:1/-1;">
+                <label>${esc(cat.label)} Photos</label>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">
+                  ${photos.map(url => `
+                    <div style="width:100px;height:100px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;cursor:pointer;" onclick="window.open('${esc(url)}', '_blank')">
+                      <img src="${esc(url)}" style="width:100%;height:100%;object-fit:cover;">
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+          `;
+        }).join('')}
+        ${(() => {
+          const matsPhotos = (r['Mats Photos'] || '').split(',').filter(Boolean);
+          return `
+            ${tagItem('Mats', 'Mats', MATS.options)}
+            ${matsPhotos.length > 0 ? `
+              <div class="detail-item" style="grid-column:1/-1;">
+                <label>Mats Photos</label>
+                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">
+                  ${matsPhotos.map(url => `
+                    <div style="width:100px;height:100px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;cursor:pointer;" onclick="window.open('${esc(url)}', '_blank')">
+                      <img src="${esc(url)}" style="width:100%;height:100%;object-fit:cover;">
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+          `;
+        })()}
       </div>
     </div>
     <div class="section">
@@ -691,7 +742,6 @@ function renderDetail(){
   return html;
 }
 
-/* ---- Revenue ---- */
 function monthKey(dateStr){
   if(!dateStr) return null;
   const d = new Date(dateStr);
@@ -733,7 +783,6 @@ function renderRevenue(){
     const monthKeyStr = monthKey(r['Date of Grooming']) || 'unspecified';
     const dayKeyStr = dayKey(r['Date of Grooming']) || 'unspecified';
     
-    // Month aggregation
     if(!byMonth[monthKeyStr]) byMonth[monthKeyStr] = { 
       total: 0, 
       count: 0, 
@@ -749,7 +798,6 @@ function renderRevenue(){
       byMonth[monthKeyStr].discountCount += 1;
     }
     
-    // Day aggregation
     if(dayKeyStr !== 'unspecified') {
       if(!byDay[dayKeyStr]) byDay[dayKeyStr] = { 
         total: 0, 
@@ -784,20 +832,18 @@ function renderRevenue(){
   });
   
   const months = Object.keys(byMonth).filter(k=>k!=='unspecified').sort().reverse();
-  const days = Object.keys(byDay).filter(k=>k!=='unspecified').sort().reverse().slice(0, 30); // Last 30 days
+  const days = Object.keys(byDay).filter(k=>k!=='unspecified').sort().reverse().slice(0, 30);
   const avg = grandCount ? (grandTotal/grandCount) : 0;
   const avgDiscount = grandDiscountCount ? (grandDiscount/grandDiscountCount) : 0;
   const discountRate = grandTotal ? ((grandDiscount / grandTotal) * 100) : 0;
   
   let html = `
-    <!-- Summary Stats -->
     <div class="revenue-summary">
       <div class="stat"><div class="eyebrow">Total Revenue</div><div class="num">${grandTotal.toFixed(2)}</div></div>
       <div class="stat"><div class="eyebrow">Total Records</div><div class="num">${grandCount}</div></div>
       <div class="stat"><div class="eyebrow">Avg. per Groom</div><div class="num">${avg.toFixed(2)}</div></div>
     </div>
     
-    <!-- Discount Stats -->
     <div class="revenue-summary" style="margin-bottom:24px;">
       <div class="stat"><div class="eyebrow">Total Discounts Given</div><div class="num" style="color:var(--clay);">${grandDiscount.toFixed(2)}</div></div>
       <div class="stat"><div class="eyebrow">Avg. Discount per Groom</div><div class="num" style="color:var(--clay);">${avgDiscount.toFixed(2)}</div></div>
@@ -805,7 +851,6 @@ function renderRevenue(){
     </div>
   `;
 
-  // Monthly trend chart (simplified bar chart)
   if(months.length > 0){
     const maxTotal = Math.max(...months.map(k => byMonth[k].total), 1);
     html += `<div style="margin-bottom:24px;">
@@ -839,7 +884,6 @@ function renderRevenue(){
     </div>`;
   }
 
-  // Recent daily breakdown
   if(days.length > 0){
     html += `<div style="margin-bottom:24px;">
       <h3 style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:12px;">Recent Daily Breakdown</h3>
@@ -873,7 +917,6 @@ function renderRevenue(){
     </div>`;
   }
 
-  // Monthly details table
   if(months.length === 0){
     html += `<div class="card empty-state"><div class="stamp">犬</div>
       <div style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:6px;">No revenue yet</div>
@@ -912,7 +955,6 @@ function renderRevenue(){
   return html;
 }
 
-/* ---- PDF export ---- */
 function exportRecordAsPdf(r){
   function row(label, val){
     return `<div><span class="k">${esc(label)}</span>${val ? esc(val) : '—'}</div>`;
@@ -923,12 +965,10 @@ function exportRecordAsPdf(r){
   }
   const printArea = document.getElementById('printArea');
   
-  // Calculate the final charge if base price and discount are available
   let basePrice = parseFloat(r['Base Price']) || 0;
   let discount = parseFloat(r['Discount (%)']) || 0;
   let finalCharge = parseFloat(r['Charges']) || 0;
   
-  // If Charges is empty but Base Price exists, calculate it
   if (!r['Charges'] && basePrice > 0) {
     finalCharge = basePrice * (1 - discount / 100);
   }
@@ -961,20 +1001,18 @@ function exportRecordAsPdf(r){
     ${r['Style Notes'] ? `<div style="font-size:13px;margin-top:8px;"><span class="k" style="color:#777;font-size:10.5px;text-transform:uppercase;">Style Notes</span>${esc(r['Style Notes'])}</div>` : ''}
     ${r['Additional Notes'] ? `<div style="font-size:13px;margin-top:8px;"><span class="k" style="color:#777;font-size:10.5px;text-transform:uppercase;">Additional Notes</span>${esc(r['Additional Notes'])}</div>` : ''}
     
-<!-- PRICING SECTION -->
-<h3>Pricing</h3>
-<div class="p-grid" style="margin-bottom:12px;">
-  ${row('Base Price', r['Base Price'] ? parseFloat(r['Base Price']).toFixed(2) : '—')}
-  ${row('Discount', r['Discount (%)'] ? r['Discount (%)'] + '%' : '—')}
-  ${row('Discount Notes', r['Discount Notes'] || '—')}
-</div>
-<div class="p-charge"><span>Total Charges</span><span>${finalCharge.toFixed(2)}</span></div>
+    <h3>Pricing</h3>
+    <div class="p-grid" style="margin-bottom:12px;">
+      ${row('Base Price', r['Base Price'] ? parseFloat(r['Base Price']).toFixed(2) : '—')}
+      ${row('Discount', r['Discount (%)'] ? r['Discount (%)'] + '%' : '—')}
+      ${row('Discount Notes', r['Discount Notes'] || '—')}
+    </div>
+    <div class="p-charge"><span>Total Charges</span><span>${finalCharge.toFixed(2)}</span></div>
     <div class="p-footer">${esc(BUSINESS_NAME)} | More than a haircut - A calm and comfortable grooming experience.</div>
   </div>`;
   window.print();
 }
 
-/* ---- Visit history (repeat customers) ---- */
 function findDogHistory(dogName, ownerName, excludeId){
   const dn = String(dogName||'').trim().toLowerCase();
   const on = String(ownerName||'').trim().toLowerCase();
@@ -1005,7 +1043,6 @@ function renderVisitHistoryBox(dogName, ownerName){
   </div>`;
 }
 
-/* ---- Form ---- */
 function pillGroup(cat, selected, groupClass){
   const selectedValues = Array.isArray(selected) ? selected : String(selected||'').split(',').map(v=>v.trim()).filter(Boolean);
   return `<div class="pill-group ${groupClass||''}" data-key="${esc(cat.key)}">
@@ -1052,12 +1089,48 @@ function renderForm(){
     <div class="section">
       <div class="section-title"><span class="num">02</span><h2>Pre-Assessment</h2></div>
       ${PRE_ASSESSMENT.map(cat=>`
-        <div class="field">
-          <label>${esc(cat.label)}</label>
+        <div class="field" style="border-bottom:1px solid var(--line-soft);padding-bottom:18px;margin-bottom:18px;">
+          <label style="font-weight:500;font-size:14px;color:var(--ink);margin-bottom:10px;">${esc(cat.label)}</label>
           ${pillGroup(cat, d[cat.key])}
           <div class="assess-note"><input type="text" id="f_${esc(cat.key)}Notes" placeholder="Notes (optional)" value="${esc(d[cat.key+' Notes'])}"></div>
+          
+          <div style="margin-top:10px;">
+            <label style="font-size:11px;color:var(--ink-soft);margin-bottom:5px;">Photos</label>
+            <div class="photo-upload-area" data-category="${esc(cat.key)}">
+              <div style="font-size:20px;">📷</div>
+              <div style="font-size:11px;color:var(--ink-soft);">Click to upload photos for ${esc(cat.label)}</div>
+              <input type="file" class="category-photo-input" data-category="${esc(cat.key)}" multiple accept="image/*" style="display:none;">
+            </div>
+            <div class="photo-preview" data-category="${esc(cat.key)}" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
+              ${(d[cat.key+' Photos'] || '').split(',').filter(Boolean).map(url => `
+                <div style="position:relative;width:80px;height:80px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;">
+                  <img src="${esc(url)}" style="width:100%;height:100%;object-fit:cover;">
+                  <button type="button" class="remove-category-photo" data-category="${esc(cat.key)}" data-url="${esc(url)}" style="position:absolute;top:2px;right:2px;background:var(--clay);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;line-height:1;">×</button>
+                </div>
+              `).join('')}
+            </div>
+          </div>
         </div>`).join('')}
-      <div class="field"><label>Mats</label>${pillGroup(MATS, d['Mats'])}</div>
+      <div class="field" style="border-bottom:1px solid var(--line-soft);padding-bottom:18px;margin-bottom:18px;">
+        <label style="font-weight:500;font-size:14px;color:var(--ink);margin-bottom:10px;">Mats</label>
+        ${pillGroup(MATS, d['Mats'])}
+        <div style="margin-top:10px;">
+          <label style="font-size:11px;color:var(--ink-soft);margin-bottom:5px;">Photos</label>
+          <div class="photo-upload-area" data-category="Mats">
+            <div style="font-size:20px;">📷</div>
+            <div style="font-size:11px;color:var(--ink-soft);">Click to upload photos for Mats</div>
+            <input type="file" class="category-photo-input" data-category="Mats" multiple accept="image/*" style="display:none;">
+          </div>
+          <div class="photo-preview" data-category="Mats" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
+            ${(d['Mats Photos'] || '').split(',').filter(Boolean).map(url => `
+              <div style="position:relative;width:80px;height:80px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;">
+                <img src="${esc(url)}" style="width:100%;height:100%;object-fit:cover;">
+                <button type="button" class="remove-category-photo" data-category="Mats" data-url="${esc(url)}" style="position:absolute;top:2px;right:2px;background:var(--clay);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;line-height:1;">×</button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="section">
@@ -1065,37 +1138,34 @@ function renderForm(){
       <div class="field"><label>Service Required</label>${pillGroup(SERVICE, d['Service Required'])}
         ${d['Service Required']==='Other' ? `<div class="assess-note"><input type="text" id="f_ServiceNotes" placeholder="Describe service" value="${esc(d['Service Notes'])}"></div>` : ''}
       </div>
-<div class="field">
-  <label>Pricing</label>
-  <div class="row3">
-    <div class="field" style="margin-bottom:0;">
-      <label>Base Price</label>
-      <input type="number" min="0" step="0.01" id="f_BasePrice" value="${esc(d['Base Price'] || d['Charges'] || '')}" placeholder="e.g. 80.00">
-    </div>
-    <div class="field" style="margin-bottom:0;">
-      <label>Discount (%)</label>
-      <input type="number" min="0" max="100" step="0.01" id="f_Discount" value="${esc(d['Discount (%)'] || '')}" placeholder="e.g. 15">
-      <div class="pill-group" style="margin-top:8px;gap:5px;">
-        <button type="button" class="pill discount-preset" data-discount="0">No discount</button>
-        <button type="button" class="pill discount-preset" data-discount="10">10%</button>
-        <button type="button" class="pill discount-preset" data-discount="15">15%</button>
-        <button type="button" class="pill discount-preset" data-discount="20">20%</button>
+      <div class="field">
+        <label>Pricing</label>
+        <div class="row3">
+          <div class="field" style="margin-bottom:0;">
+            <label>Base Price</label>
+            <input type="number" min="0" step="0.01" id="f_BasePrice" value="${esc(d['Base Price'] || d['Charges'] || '')}" placeholder="e.g. 80.00">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Discount (%)</label>
+            <input type="number" min="0" max="100" step="0.01" id="f_Discount" value="${esc(d['Discount (%)'] || '')}" placeholder="e.g. 15">
+            <div class="pill-group" style="margin-top:8px;gap:5px;">
+              <button type="button" class="pill discount-preset" data-discount="0">No discount</button>
+              <button type="button" class="pill discount-preset" data-discount="10">10%</button>
+              <button type="button" class="pill discount-preset" data-discount="15">15%</button>
+              <button type="button" class="pill discount-preset" data-discount="20">20%</button>
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Final Charges</label>
+            <input type="number" step="0.01" id="f_Charges" value="${esc(d['Charges'])}" placeholder="0.00" readonly>
+          </div>
+        </div>
+        <div class="field" style="margin-top:10px;">
+          <label>Discount Notes (e.g., "First time client", "Referral", "Package deal")</label>
+          <input type="text" id="f_DiscountNotes" value="${esc(d['Discount Notes'] || '')}" placeholder="Why was the discount applied?">
+        </div>
+        <div id="priceCalculation" style="margin-top:10px;font-size:12.5px;color:var(--ink-soft);"></div>
       </div>
-    </div>
-    <div class="field" style="margin-bottom:0;">
-      <label>Final Charges</label>
-      <input type="number" step="0.01" id="f_Charges" value="${esc(d['Charges'])}" placeholder="0.00" readonly>
-    </div>
-  </div>
-  
-  <!-- THIS IS THE DISCOUNT NOTES FIELD - MAKE SURE IT'S HERE -->
-  <div class="field" style="margin-top:10px;">
-    <label>Discount Notes (e.g., "First time client", "Referral", "Package deal")</label>
-    <input type="text" id="f_DiscountNotes" value="${esc(d['Discount Notes'] || '')}" placeholder="Why was the discount applied?">
-  </div>
-  
-  <div id="priceCalculation" style="margin-top:10px;font-size:12.5px;color:var(--ink-soft);"></div>
-</div>
       <div class="field"><label>Temperament &amp; Behavior During Grooming</label>${multiPillGroup(TEMPERAMENT, d['Temperament'])}
         ${parseMultiValue(d['Temperament']).includes('Other') ? `<div class="assess-note"><input type="text" id="f_TemperamentNotes" placeholder="Describe behavior" value="${esc(d['Temperament Notes'])}"></div>` : ''}
       </div>
@@ -1127,7 +1197,6 @@ function renderForm(){
   return html;
 }
 
-/* ------------------------- Pricing ------------------------- */
 function calculatePrice(){
   const baseEl = document.getElementById('f_BasePrice');
   const discountEl = document.getElementById('f_Discount');
@@ -1173,7 +1242,93 @@ function setupPricingHandlers(){
   calculatePrice();
 }
 
-/* ------------------------- Handlers ------------------------- */
+function setupCategoryPhotoUpload() {
+  // Photo upload areas
+  document.querySelectorAll('.photo-upload-area').forEach(area => {
+    const category = area.dataset.category;
+    const fileInput = area.querySelector('.category-photo-input');
+    
+    if (!fileInput) return;
+    
+    area.onclick = () => fileInput.click();
+    
+    fileInput.onchange = async () => {
+      if (fileInput.files.length === 0) return;
+      
+      const files = Array.from(fileInput.files);
+      showToast(`Uploading ${files.length} photo${files.length > 1 ? 's' : ''}...`);
+      
+      try {
+        const recordId = state.editingId || state.detailId;
+        if (!recordId) {
+          showToast('Please save the record first, then upload photos');
+          return;
+        }
+        
+        const result = await uploadCategoryPhoto(recordId, category, files);
+        if (result.success) {
+          showToast('Photos uploaded successfully!');
+          const currentPhotos = state.formData[category + ' Photos'] || '';
+          const photoUrls = result.urls || [];
+          const updatedPhotos = currentPhotos ? `${currentPhotos},${photoUrls.join(',')}` : photoUrls.join(',');
+          state.formData[category + ' Photos'] = updatedPhotos;
+          render();
+        } else {
+          showToast('Upload failed: ' + result.error);
+        }
+      } catch (err) {
+        showToast('Upload failed. Please try again.');
+        console.error(err);
+      }
+      
+      fileInput.value = '';
+    };
+    
+    area.ondragover = (e) => {
+      e.preventDefault();
+      area.style.borderColor = 'var(--sage)';
+      area.style.background = 'var(--sage-soft)';
+    };
+    
+    area.ondragleave = () => {
+      area.style.borderColor = 'var(--line)';
+      area.style.background = '#fafaf8';
+    };
+    
+    area.ondrop = (e) => {
+      e.preventDefault();
+      area.style.borderColor = 'var(--line)';
+      area.style.background = '#fafaf8';
+      
+      if (e.dataTransfer.files.length > 0) {
+        fileInput.files = e.dataTransfer.files;
+        fileInput.onchange();
+      }
+    };
+  });
+  
+  // Remove photo buttons
+  document.querySelectorAll('.remove-category-photo').forEach(btn => {
+    btn.onclick = async (e) => {
+      e.stopPropagation();
+      const category = btn.dataset.category;
+      const url = btn.dataset.url;
+      if (!confirm('Remove this photo?')) return;
+      
+      const recordId = state.editingId || state.detailId;
+      if (!recordId) return;
+      
+      const currentPhotos = (state.formData[category + ' Photos'] || '').split(',').filter(Boolean);
+      const updatedPhotos = currentPhotos.filter(u => u !== url);
+      state.formData[category + ' Photos'] = updatedPhotos.join(',');
+      
+      await apiUpdate(recordId, { [category + ' Photos']: state.formData[category + ' Photos'] });
+      showToast('Photo removed');
+      render();
+    };
+  });
+}
+
 function attachHandlers(){
   document.querySelectorAll('nav.tabs button').forEach(b=>{
     b.onclick = ()=>{
@@ -1188,7 +1343,7 @@ function attachHandlers(){
 
   const searchInput = document.getElementById('searchInput');
   if(searchInput){
-    searchInput.oninput = (e)=>{ state.search = e.target.value; render(); document.getElementById('searchInput').focus(); document.getElementById('searchInput').selectionStart = document.getElementById('searchInput').value.length; };
+    searchInput.oninput = (e)=>{ state.search = e.target.value; render(); };
   }
 
   document.querySelectorAll('.record-tag').forEach(el=>{
@@ -1220,7 +1375,6 @@ function attachHandlers(){
     }catch(err){ showToast('Could not delete'); console.error(err); }
   };
 
-  // pill groups — Temperament supports multiple selections; all other groups remain single-select
   document.querySelectorAll('.pill-group').forEach(group=>{
     group.querySelectorAll('.pill').forEach(pill=>{
       pill.onclick = ()=>{
@@ -1239,7 +1393,6 @@ function attachHandlers(){
     });
   });
 
-  // shampoo options — multiple selections allowed
   document.querySelectorAll('.shampoo-option').forEach(opt=>{
     opt.onclick = ()=>{
       collectFormData();
@@ -1252,11 +1405,11 @@ function attachHandlers(){
   });
 
   setupPricingHandlers();
+  setupCategoryPhotoUpload();
 
   const cancelBtn = document.getElementById('cancelFormBtn');
   if(cancelBtn) cancelBtn.onclick = ()=>{ state.tab = state.editingId ? 'detail' : 'list'; render(); };
 
-  // dog/owner autofill from history
   function tryAutofillFromHistory(){
     collectFormData();
     const history = findDogHistory(state.formData['Dog Name'], state.formData['Owner Name'], state.editingId);
@@ -1274,31 +1427,28 @@ function attachHandlers(){
   if(ownerInput) ownerInput.onchange = tryAutofillFromHistory;
 
   const saveBtn = document.getElementById('saveFormBtn');
-if(saveBtn) saveBtn.onclick = async ()=>{
-  collectFormData();
-  
-  // DEBUG: Log what's being saved
-  console.log('Saving form data:', state.formData);
-  console.log('Discount Notes value:', state.formData['Discount Notes']);
-  
-  if(!state.formData['Dog Name']){ showToast('Please enter a dog name'); return; }
-  saveBtn.textContent = 'Saving…'; saveBtn.disabled = true;
-  try{
-    if(state.editingId){
-      await apiUpdate(state.editingId, state.formData);
-      showToast('Record updated');
-    }else{
-      await apiCreate(state.formData);
-      showToast('Record saved');
+  if(saveBtn) saveBtn.onclick = async ()=>{
+    collectFormData();
+    
+    if(!state.formData['Dog Name']){ showToast('Please enter a dog name'); return; }
+    saveBtn.textContent = 'Saving…'; saveBtn.disabled = true;
+    try{
+      if(state.editingId){
+        await apiUpdate(state.editingId, state.formData);
+        showToast('Record updated');
+      }else{
+        const result = await apiCreate(state.formData);
+        state.editingId = result.id;
+        showToast('Record saved');
+      }
+      state.tab = 'list';
+      await refreshRecords();
+    }catch(err){
+      showToast('Could not save — check connection');
+      console.error(err);
+      saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record'; saveBtn.disabled = false;
     }
-    state.tab = 'list';
-    await refreshRecords();
-  }catch(err){
-    showToast('Could not save — check connection');
-    console.error(err);
-    saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record'; saveBtn.disabled = false;
-  }
-};
+  };
 }
 
 function collectFormData(){
@@ -1315,18 +1465,20 @@ function collectFormData(){
     'Charges':'f_Charges',
     'Base Price':'f_BasePrice',
     'Discount (%)':'f_Discount',
-    'Discount Notes':'f_DiscountNotes',  // THIS MUST BE HERE
+    'Discount Notes':'f_DiscountNotes',
     'Temperament Notes':'f_TemperamentNotes',
     'Shampoo Notes':'f_ShampooNotes'
   };
-  PRE_ASSESSMENT.forEach(cat=>{ map[cat.key+' Notes'] = 'f_'+cat.key+'Notes'; });
+  PRE_ASSESSMENT.forEach(cat=>{ 
+    map[cat.key+' Notes'] = 'f_'+cat.key+'Notes';
+    // Photos are handled separately
+  });
   Object.entries(map).forEach(([k,id])=>{
     const el = document.getElementById(id);
     if(el) d[k] = el.value;
   });
 }
 
-/* ------------------------- Init ------------------------- */
 initBranding();
 render();
 if(configured()) refreshRecords();
