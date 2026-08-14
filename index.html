@@ -246,7 +246,8 @@
 <div class="topbar">
   <div class="topbar-inner">
     <div class="brand-mark" id="brandMark">
-      <div class="stamp">logo.png</div>
+      <div class="logo.png"
+           / <!-- <div class="stamp">logo.png</div> -->
       <div>
         <h1>Mollie Pet</h1>
         <div class="eyebrow">Customer &amp; care records</div>
@@ -390,7 +391,7 @@ function configBanner(){
 }
 function configBannerIfNeeded(){ return ''; }
 function emptyConfigState(){
-  return `<div class="card empty-state"><div class="stamp">logo.png</div>
+  return `<div class="card empty-state"><div class="logo.png"</div>
     <div style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:6px;">Not connected yet</div>
     <div>This page will list and log grooming records once it's linked to your Google Sheet.</div>
   </div>`;
@@ -409,7 +410,7 @@ function renderList(){
     <button class="btn" id="newRecordBtn">+ New Record</button>
   </div>`;
   if(filtered.length === 0){
-    html += `<div class="card empty-state"><div class="stamp">logo.png</div>
+    html += `<div class="card empty-state"><div class="logo.png"</div>
       <div style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:6px;">${state.records.length===0 ? 'No records yet' : 'No matches'}</div>
       <div>${state.records.length===0 ? 'Log your first grooming visit to get started.' : 'Try a different search.'}</div>
     </div>`;
@@ -540,7 +541,7 @@ function renderRevenue(){
   </div>`;
 
   if(months.length === 0){
-    html += `<div class="card empty-state"><div class="stamp">logo.png</div>
+    html += `<div class="card empty-state"><div class="logo.png"</div>
       <div style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:6px;">No revenue yet</div>
       <div>Charges you record against each groom will roll up here by month.</div>
     </div>`;
