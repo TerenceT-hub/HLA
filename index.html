@@ -715,7 +715,7 @@ function renderForm(){
         <label>Pricing</label>
         <div class="row3">
           <div class="field" style="margin-bottom:0;">
-            <label>Base Price (RM)</label>
+            <label>Base Price</label>
             <input type="number" min="0" step="0.01" id="f_BasePrice" value="${esc(d['Base Price'] || d['Charges'] || '')}" placeholder="e.g. 80.00">
           </div>
           <div class="field" style="margin-bottom:0;">
@@ -729,7 +729,7 @@ function renderForm(){
             </div>
           </div>
           <div class="field" style="margin-bottom:0;">
-            <label>Final Charges (RM)</label>
+            <label>Final Charges</label>
             <input type="number" step="0.01" id="f_Charges" value="${esc(d['Charges'])}" placeholder="0.00" readonly>
           </div>
         </div>
@@ -787,9 +787,9 @@ function calculatePrice(){
     if(baseEl.value === ''){
       summaryEl.textContent = 'Enter the base price to calculate the final charge.';
     }else if(discount > 0){
-      summaryEl.innerHTML = `RM ${base.toFixed(2)} − ${discount.toFixed(2)}% discount (RM ${discountAmount.toFixed(2)}) = <strong>RM ${finalPrice.toFixed(2)}</strong>`;
+      summaryEl.innerHTML = `${base.toFixed(2)} − ${discount.toFixed(2)}% discount (${discountAmount.toFixed(2)}) = <strong>${finalPrice.toFixed(2)}</strong>`;
     }else{
-      summaryEl.innerHTML = `Final charge: <strong>RM ${finalPrice.toFixed(2)}</strong>`;
+      summaryEl.innerHTML = `Final charge: <strong>${finalPrice.toFixed(2)}</strong>`;
     }
   }
 }
