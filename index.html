@@ -246,7 +246,7 @@
 <div class="topbar">
   <div class="topbar-inner">
     <div class="brand-mark" id="brandMark">
-      <div class="stamp">犬</div>
+      <div class="stamp">logo.png</div>
       <div>
         <h1>Mollie Pet</h1>
         <div class="eyebrow">Customer &amp; care records</div>
@@ -278,7 +278,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMbFKSzcX0-oLG
 // (e.g. logo.png) and set this to "logo.png" — or paste a full image URL.
 // Leave LOGO_URL as "" to keep the default paw stamp instead.
 const BUSINESS_NAME = "Mollie Pet";
-const LOGO_URL = "logo.png";
+const LOGO_URL = "";
 /* ================================================================ */
 
 const PRE_ASSESSMENT = [
@@ -390,7 +390,7 @@ function configBanner(){
 }
 function configBannerIfNeeded(){ return ''; }
 function emptyConfigState(){
-  return `<div class="card empty-state"><div class="stamp">犬</div>
+  return `<div class="card empty-state"><div class="stamp">logo.png</div>
     <div style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:6px;">Not connected yet</div>
     <div>This page will list and log grooming records once it's linked to your Google Sheet.</div>
   </div>`;
@@ -409,7 +409,7 @@ function renderList(){
     <button class="btn" id="newRecordBtn">+ New Record</button>
   </div>`;
   if(filtered.length === 0){
-    html += `<div class="card empty-state"><div class="stamp">犬</div>
+    html += `<div class="card empty-state"><div class="stamp">logo.png</div>
       <div style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:6px;">${state.records.length===0 ? 'No records yet' : 'No matches'}</div>
       <div>${state.records.length===0 ? 'Log your first grooming visit to get started.' : 'Try a different search.'}</div>
     </div>`;
@@ -486,6 +486,22 @@ function renderDetail(){
       ${item('Specific Request / Style Notes', r['Style Notes'])}
       ${item('Additional Notes', r['Additional Notes'])}
     </div>
+    ${(() => {
+      const history = findDogHistory(r['Dog Name'], r['Owner Name'], r['Record ID']);
+      if(history.length === 0) return '';
+      return `<div class="section" style="padding-top:6px;">
+        <div class="section-title"><span class="num">03</span><h2>Visit History</h2></div>
+        ${history.map(h=>`
+          <div class="record-tag history-row" data-id="${esc(h['Record ID'])}" style="margin-bottom:8px;">
+            <span class="punch"></span>
+            <div class="info">
+              <div class="dog">${esc(h['Service Required']||'Visit')}</div>
+              <div class="meta">${esc(h['Temperament']||'—')}${h['Style Notes'] ? ' · '+esc(h['Style Notes']) : ''}</div>
+            </div>
+            <div class="date">${esc(h['Date of Grooming']||'')}${h['Charges'] ? '<br>RM '+esc(h['Charges']) : ''}</div>
+          </div>`).join('')}
+      </div>`;
+    })()}
   </div>`;
   return html;
 }
@@ -524,7 +540,7 @@ function renderRevenue(){
   </div>`;
 
   if(months.length === 0){
-    html += `<div class="card empty-state"><div class="stamp">犬</div>
+    html += `<div class="card empty-state"><div class="stamp">logo.png</div>
       <div style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:6px;">No revenue yet</div>
       <div>Charges you record against each groom will roll up here by month.</div>
     </div>`;
@@ -592,6 +608,37 @@ function exportRecordAsPdf(r){
   window.print();
 }
 
+/* ---- Visit history (repeat customers) ---- */
+function findDogHistory(dogName, ownerName, excludeId){
+  const dn = String(dogName||'').trim().toLowerCase();
+  const on = String(ownerName||'').trim().toLowerCase();
+  if(!dn) return [];
+  return state.records.filter(r=>{
+    if(excludeId && r['Record ID']===excludeId) return false;
+    const rdn = String(r['Dog Name']||'').trim().toLowerCase();
+    const ron = String(r['Owner Name']||'').trim().toLowerCase();
+    if(rdn !== dn) return false;
+    if(on && ron !== on) return false;
+    return true;
+  }).sort((a,b)=> String(b['Date of Grooming']||'').localeCompare(String(a['Date of Grooming']||'')));
+}
+function uniqueDogNames(){ return [...new Set(state.records.map(r=>r['Dog Name']).filter(Boolean))]; }
+function uniqueOwnerNames(){ return [...new Set(state.records.map(r=>r['Owner Name']).filter(Boolean))]; }
+function renderVisitHistoryBox(dogName, ownerName){
+  const history = findDogHistory(dogName, ownerName, state.editingId);
+  if(history.length === 0) return '';
+  return `<div class="field" id="visitHistoryBox">
+    <div style="background:var(--sage-soft);border:1px solid var(--sage);border-radius:var(--radius);padding:14px 16px;">
+      <label style="color:var(--sage);margin-bottom:8px;">Previous Visits — ${esc(dogName)}</label>
+      ${history.slice(0,5).map(h=>`<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.06);">
+        <span>${esc(h['Date of Grooming']||'—')} · ${esc(h['Service Required']||'—')}</span>
+        <span style="color:var(--ink-soft);">${h['Charges'] ? 'RM '+esc(h['Charges']) : ''}</span>
+      </div>`).join('')}
+      <div style="font-size:11.5px;color:var(--ink-soft);margin-top:8px;">Breed and gender were filled in from their last visit — adjust anything that's changed.</div>
+    </div>
+  </div>`;
+}
+
 /* ---- Form ---- */
 function pillGroup(cat, selected, groupClass){
   return `<div class="pill-group" data-key="${esc(cat.key)}">
@@ -609,9 +656,12 @@ function renderForm(){
     <div class="section">
       <div class="section-title"><span class="num">01</span><h2>Dog &amp; Owner</h2></div>
       <div class="row">
-        <div class="field"><label>Dog Name</label><input type="text" id="f_DogName" value="${esc(d['Dog Name'])}" placeholder="e.g. Mochi"></div>
-        <div class="field"><label>Owner Name</label><input type="text" id="f_OwnerName" value="${esc(d['Owner Name'])}" placeholder="e.g. Lim Wei"></div>
+        <div class="field"><label>Dog Name</label><input type="text" id="f_DogName" list="dogDatalist" value="${esc(d['Dog Name'])}" placeholder="e.g. Mochi"></div>
+        <div class="field"><label>Owner Name</label><input type="text" id="f_OwnerName" list="ownerDatalist" value="${esc(d['Owner Name'])}" placeholder="e.g. Lim Wei"></div>
       </div>
+      <datalist id="dogDatalist">${uniqueDogNames().map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
+      <datalist id="ownerDatalist">${uniqueOwnerNames().map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
+      ${renderVisitHistoryBox(d['Dog Name'], d['Owner Name'])}
       <div class="row3">
         <div class="field"><label>Date of Grooming</label><input type="date" id="f_Date" value="${esc(d['Date of Grooming']||todayStr())}"></div>
         <div class="field"><label>Breed</label><input type="text" id="f_Breed" value="${esc(d['Breed'])}" placeholder="e.g. Poodle"></div>
@@ -738,6 +788,23 @@ function attachHandlers(){
 
   const cancelBtn = document.getElementById('cancelFormBtn');
   if(cancelBtn) cancelBtn.onclick = ()=>{ state.tab = state.editingId ? 'detail' : 'list'; render(); };
+
+  // dog/owner autofill from history
+  function tryAutofillFromHistory(){
+    collectFormData();
+    const history = findDogHistory(state.formData['Dog Name'], state.formData['Owner Name'], state.editingId);
+    if(history.length){
+      const latest = history[0];
+      if(!state.formData['Owner Name']) state.formData['Owner Name'] = latest['Owner Name'];
+      if(!state.formData['Breed']) state.formData['Breed'] = latest['Breed'];
+      if(!state.formData['Gender']) state.formData['Gender'] = latest['Gender'];
+    }
+    render();
+  }
+  const dogInput = document.getElementById('f_DogName');
+  const ownerInput = document.getElementById('f_OwnerName');
+  if(dogInput) dogInput.onchange = tryAutofillFromHistory;
+  if(ownerInput) ownerInput.onchange = tryAutofillFromHistory;
 
   const saveBtn = document.getElementById('saveFormBtn');
   if(saveBtn) saveBtn.onclick = async ()=>{
