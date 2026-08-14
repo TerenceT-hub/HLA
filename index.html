@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Grooming Log</title>
+<title>Mollie Pet</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -248,7 +248,7 @@
     <div class="brand-mark" id="brandMark">
       <div class="stamp">犬</div>
       <div>
-        <h1>Grooming Log</h1>
+        <h1>Mollie Pet</h1>
         <div class="eyebrow">Customer &amp; care records</div>
       </div>
     </div>
@@ -277,7 +277,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMbFKSzcX0-oLG
 // LOGO_URL: upload your logo image into the same GitHub repo as this file
 // (e.g. logo.png) and set this to "logo.png" — or paste a full image URL.
 // Leave LOGO_URL as "" to keep the default paw stamp instead.
-const BUSINESS_NAME = "Grooming Log";
+const BUSINESS_NAME = "Mollie Pet";
 const LOGO_URL = "logo.png";
 /* ================================================================ */
 
@@ -468,7 +468,7 @@ function renderDetail(){
       ${tagItem('Gender', 'Gender', GENDER.options)}
       ${item('Weight (kg)', r['Weight (kg)'])}
       ${tagItem('Service Required', 'Service Required', SERVICE.options)}
-      ${item('Charges (RM)', r['Charges (RM)'] ? 'RM ' + r['Charges (RM)'] : '')}
+      ${item('Charges', r['Charges'] ? r['Charges'] : '')}
     </div>
     <div class="section" style="padding-top:6px;">
       <div class="section-title"><span class="num">01</span><h2>Pre-Assessment</h2></div>
@@ -498,7 +498,7 @@ function renderDetail(){
               <div class="dog">${esc(h['Service Required']||'Visit')}</div>
               <div class="meta">${esc(h['Temperament']||'—')}${h['Style Notes'] ? ' · '+esc(h['Style Notes']) : ''}</div>
             </div>
-            <div class="date">${esc(h['Date of Grooming']||'')}${h['Charges (RM)'] ? '<br>RM '+esc(h['Charges (RM)']) : ''}</div>
+            <div class="date">${esc(h['Date of Grooming']||'')}${h['Charges'] ? '<br>RM '+esc(h['Charges']) : ''}</div>
           </div>`).join('')}
       </div>`;
     })()}
@@ -522,7 +522,7 @@ function renderRevenue(){
   const byMonth = {};
   let grandTotal = 0, grandCount = 0;
   state.records.forEach(r=>{
-    const charge = parseFloat(r['Charges (RM)']) || 0;
+    const charge = parseFloat(r['Charges']) || 0;
     const key = monthKey(r['Date of Grooming']) || 'unspecified';
     if(!byMonth[key]) byMonth[key] = { total:0, count:0 };
     byMonth[key].total += charge;
@@ -602,7 +602,7 @@ function exportRecordAsPdf(r){
     </div>
     ${r['Style Notes'] ? `<div style="font-size:13px;margin-top:8px;"><span class="k" style="color:#777;font-size:10.5px;text-transform:uppercase;">Style Notes</span>${esc(r['Style Notes'])}</div>` : ''}
     ${r['Additional Notes'] ? `<div style="font-size:13px;margin-top:8px;"><span class="k" style="color:#777;font-size:10.5px;text-transform:uppercase;">Additional Notes</span>${esc(r['Additional Notes'])}</div>` : ''}
-    <div class="p-charge"><span>Total Charges</span><span>RM ${r['Charges (RM)'] ? parseFloat(r['Charges (RM)']).toFixed(2) : '0.00'}</span></div>
+    <div class="p-charge"><span>Total Charges</span><span>RM ${r['Charges'] ? parseFloat(r['Charges']).toFixed(2) : '0.00'}</span></div>
     <div class="p-footer">Thank you for trusting ${esc(BUSINESS_NAME)} with your dog's grooming.</div>
   </div>`;
   window.print();
@@ -632,7 +632,7 @@ function renderVisitHistoryBox(dogName, ownerName){
       <label style="color:var(--sage);margin-bottom:8px;">Previous Visits — ${esc(dogName)}</label>
       ${history.slice(0,5).map(h=>`<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.06);">
         <span>${esc(h['Date of Grooming']||'—')} · ${esc(h['Service Required']||'—')}</span>
-        <span style="color:var(--ink-soft);">${h['Charges (RM)'] ? 'RM '+esc(h['Charges (RM)']) : ''}</span>
+        <span style="color:var(--ink-soft);">${h['Charges'] ? 'RM '+esc(h['Charges']) : ''}</span>
       </div>`).join('')}
       <div style="font-size:11.5px;color:var(--ink-soft);margin-top:8px;">Breed and gender were filled in from their last visit — adjust anything that's changed.</div>
     </div>
@@ -686,7 +686,7 @@ function renderForm(){
       <div class="field"><label>Service Required</label>${pillGroup(SERVICE, d['Service Required'])}
         ${d['Service Required']==='Other' ? `<div class="assess-note"><input type="text" id="f_ServiceNotes" placeholder="Describe service" value="${esc(d['Service Notes'])}"></div>` : ''}
       </div>
-      <div class="field" style="max-width:220px;"><label>Charges (RM)</label><input type="number" step="0.01" id="f_Charges" value="${esc(d['Charges (RM)'])}" placeholder="0.00"></div>
+      <div class="field" style="max-width:220px;"><label>Charges</label><input type="number" step="0.01" id="f_Charges" value="${esc(d['Charges'])}" placeholder="0.00"></div>
       <div class="field"><label>Temperament &amp; Behavior During Grooming</label>${pillGroup(TEMPERAMENT, d['Temperament'])}
         ${d['Temperament']==='Other' ? `<div class="assess-note"><input type="text" id="f_TemperamentNotes" placeholder="Describe behavior" value="${esc(d['Temperament Notes'])}"></div>` : ''}
       </div>
@@ -834,7 +834,7 @@ function collectFormData(){
   const map = {
     'Dog Name':'f_DogName','Owner Name':'f_OwnerName','Date of Grooming':'f_Date','Breed':'f_Breed','Weight (kg)':'f_Weight',
     'Style Notes':'f_StyleNotes','Additional Notes':'f_AdditionalNotes','Service Notes':'f_ServiceNotes',
-    'Charges (RM)':'f_Charges',
+    'Charges':'f_Charges',
     'Temperament Notes':'f_TemperamentNotes','Shampoo Notes':'f_ShampooNotes'
   };
   PRE_ASSESSMENT.forEach(cat=>{ map[cat.key+' Notes'] = 'f_'+cat.key+'Notes'; });
