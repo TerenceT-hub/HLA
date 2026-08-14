@@ -747,12 +747,13 @@ function renderForm(){
       <input type="number" step="0.01" id="f_Charges" value="${esc(d['Charges'])}" placeholder="0.00" readonly>
     </div>
   </div>
-  <div class="row" style="margin-top:10px;">
-    <div class="field" style="margin-bottom:0;">
-      <label>Discount Notes (e.g., "First time client", "Referral", "Package deal")</label>
-      <input type="text" id="f_DiscountNotes" value="${esc(d['Discount Notes'] || '')}" placeholder="Why was the discount applied?">
-    </div>
+  
+  <!-- THIS IS THE DISCOUNT NOTES FIELD - MAKE SURE IT'S HERE -->
+  <div class="field" style="margin-top:10px;">
+    <label>Discount Notes (e.g., "First time client", "Referral", "Package deal")</label>
+    <input type="text" id="f_DiscountNotes" value="${esc(d['Discount Notes'] || '')}" placeholder="Why was the discount applied?">
   </div>
+  
   <div id="priceCalculation" style="margin-top:10px;font-size:12.5px;color:var(--ink-soft);"></div>
 </div>
       <div class="field"><label>Temperament &amp; Behavior During Grooming</label>${multiPillGroup(TEMPERAMENT, d['Temperament'])}
@@ -933,46 +934,51 @@ function attachHandlers(){
   if(ownerInput) ownerInput.onchange = tryAutofillFromHistory;
 
   const saveBtn = document.getElementById('saveFormBtn');
-  if(saveBtn) saveBtn.onclick = async ()=>{
-    collectFormData();
-    if(!state.formData['Dog Name']){ showToast('Please enter a dog name'); return; }
-    saveBtn.textContent = 'Saving…'; saveBtn.disabled = true;
-    try{
-      if(state.editingId){
-        await apiUpdate(state.editingId, state.formData);
-        showToast('Record updated');
-      }else{
-        await apiCreate(state.formData);
-        showToast('Record saved');
-      }
-      state.tab = 'list';
-      await refreshRecords();
-    }catch(err){
-      showToast('Could not save — check connection');
-      console.error(err);
-      saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record'; saveBtn.disabled = false;
+if(saveBtn) saveBtn.onclick = async ()=>{
+  collectFormData();
+  
+  // DEBUG: Log what's being saved
+  console.log('Saving form data:', state.formData);
+  console.log('Discount Notes value:', state.formData['Discount Notes']);
+  
+  if(!state.formData['Dog Name']){ showToast('Please enter a dog name'); return; }
+  saveBtn.textContent = 'Saving…'; saveBtn.disabled = true;
+  try{
+    if(state.editingId){
+      await apiUpdate(state.editingId, state.formData);
+      showToast('Record updated');
+    }else{
+      await apiCreate(state.formData);
+      showToast('Record saved');
     }
-  };
+    state.tab = 'list';
+    await refreshRecords();
+  }catch(err){
+    showToast('Could not save — check connection');
+    console.error(err);
+    saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record'; saveBtn.disabled = false;
+  }
+};
 }
 
 function collectFormData(){
   const d = state.formData;
   const map = {
-  'Dog Name':'f_DogName',
-  'Owner Name':'f_OwnerName',
-  'Date of Grooming':'f_Date',
-  'Breed':'f_Breed',
-  'Weight (kg)':'f_Weight',
-  'Style Notes':'f_StyleNotes',
-  'Additional Notes':'f_AdditionalNotes',
-  'Service Notes':'f_ServiceNotes',
-  'Charges':'f_Charges',
-  'Base Price':'f_BasePrice',
-  'Discount (%)':'f_Discount',
-  'Discount Notes':'f_DiscountNotes',  // Make sure this is here
-  'Temperament Notes':'f_TemperamentNotes',
-  'Shampoo Notes':'f_ShampooNotes'
-};
+    'Dog Name':'f_DogName',
+    'Owner Name':'f_OwnerName',
+    'Date of Grooming':'f_Date',
+    'Breed':'f_Breed',
+    'Weight (kg)':'f_Weight',
+    'Style Notes':'f_StyleNotes',
+    'Additional Notes':'f_AdditionalNotes',
+    'Service Notes':'f_ServiceNotes',
+    'Charges':'f_Charges',
+    'Base Price':'f_BasePrice',
+    'Discount (%)':'f_Discount',
+    'Discount Notes':'f_DiscountNotes',  // THIS MUST BE HERE
+    'Temperament Notes':'f_TemperamentNotes',
+    'Shampoo Notes':'f_ShampooNotes'
+  };
   PRE_ASSESSMENT.forEach(cat=>{ map[cat.key+' Notes'] = 'f_'+cat.key+'Notes'; });
   Object.entries(map).forEach(([k,id])=>{
     const el = document.getElementById(id);
