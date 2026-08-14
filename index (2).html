@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Grooming Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@500;700&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F7F4EC;
+    --card:#FFFFFF;
+    --line:#E4DDCB;
+    --line-soft:#EDE8DA;
+    --ink:#33302A;
+    --ink-soft:#8A8474;
+    --sage:#78855F;
+    --sage-soft:#E7EAE0;
+    --clay:#B5654A;
+    --clay-soft:#F4E3DC;
+    --gold:#AD8A2C;
+    --gold-soft:#F1E7CD;
+    --radius:3px;
+    --shadow: 0 1px 2px rgba(51,48,42,0.05);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Zen Kaku Gothic New', sans-serif;
+    font-size:15px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{
+    font-family:'Shippori Mincho', serif;
+    font-weight:700;
+    margin:0;
+    letter-spacing:.02em;
+  }
+  .eyebrow{
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ink-soft);
+    font-weight:500;
+  }
+  button{font-family:inherit;cursor:pointer;}
+  input,select,textarea{font-family:inherit;font-size:15px;}
+
+  /* ---- Shell ---- */
+  .topbar{
+    border-bottom:1px solid var(--line);
+    background:var(--paper);
+    position:sticky;top:0;z-index:10;
+  }
+  .topbar-inner{
+    max-width:920px;margin:0 auto;padding:22px 24px 18px;
+    display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:16px;
+  }
+  .brand-mark{display:flex;align-items:center;gap:12px;}
+  .brand-mark .stamp{
+    width:34px;height:34px;border-radius:50%;
+    border:1px solid var(--sage);
+    display:flex;align-items:center;justify-content:center;
+    color:var(--sage);font-family:'Shippori Mincho',serif;font-weight:700;font-size:15px;
+    flex-shrink:0;
+  }
+  .brand-mark h1{font-size:21px;}
+  .brand-mark .eyebrow{margin-top:2px;}
+  nav.tabs{display:flex;gap:4px;}
+  nav.tabs button{
+    background:none;border:1px solid transparent;
+    padding:8px 16px;font-size:13px;letter-spacing:.03em;color:var(--ink-soft);
+    border-radius:999px;transition:all .15s ease;
+  }
+  nav.tabs button.active{
+    background:var(--sage-soft);color:var(--sage);border-color:var(--sage-soft);font-weight:500;
+  }
+  nav.tabs button:hover:not(.active){color:var(--ink);}
+
+  main{max-width:920px;margin:0 auto;padding:32px 24px 80px;}
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+  }
+
+  /* ---- Config banner ---- */
+  .config-banner{
+    background:var(--gold-soft);border:1px solid var(--gold);color:#6b5620;
+    padding:14px 18px;border-radius:var(--radius);font-size:13.5px;margin-bottom:24px;
+  }
+  .config-banner code{background:rgba(0,0,0,.06);padding:1px 5px;border-radius:2px;}
+
+  /* ---- Section ---- */
+  .section{padding:28px 28px;}
+  .section + .section{border-top:1px solid var(--line-soft);}
+  .section-title{display:flex;align-items:baseline;gap:10px;margin-bottom:18px;}
+  .section-title .num{font-family:'Shippori Mincho',serif;color:var(--sage);font-size:13px;}
+  .section-title h2{font-size:16px;}
+
+  .field{margin-bottom:18px;}
+  .field:last-child{margin-bottom:0;}
+  .field label{display:block;font-size:12px;color:var(--ink-soft);margin-bottom:7px;letter-spacing:.03em;}
+  .field input[type=text],.field input[type=number],.field input[type=date],.field textarea,.field select{
+    width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius);
+    background:#fff;color:var(--ink);outline:none;transition:border-color .15s;
+  }
+  .field input:focus,.field textarea:focus,.field select:focus{border-color:var(--sage);}
+  .field textarea{resize:vertical;min-height:56px;}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+  @media(max-width:640px){.row,.row3{grid-template-columns:1fr;}}
+
+  /* ---- Pill select (signature component) ---- */
+  .pill-group{display:flex;flex-wrap:wrap;gap:8px;}
+  .pill{
+    border:1px solid var(--line);background:#fff;color:var(--ink-soft);
+    padding:7px 14px;border-radius:999px;font-size:13px;display:flex;align-items:center;gap:7px;
+    transition:all .12s ease;
+  }
+  .pill .dot{width:6px;height:6px;border-radius:50%;background:var(--ink-soft);flex-shrink:0;}
+  .pill:hover{border-color:var(--ink-soft);}
+  .pill.selected{border-color:currentColor;font-weight:500;}
+  .pill.selected.ok{color:var(--sage);background:var(--sage-soft);}
+  .pill.selected.ok .dot{background:var(--sage);}
+  .pill.selected.warn{color:var(--clay);background:var(--clay-soft);}
+  .pill.selected.warn .dot{background:var(--clay);}
+  .pill.selected.neutral{color:var(--ink);background:var(--line-soft);}
+  .pill.selected.neutral .dot{background:var(--ink);}
+
+  .assess-note{margin-top:10px;}
+  .assess-note input{font-size:13px;padding:8px 11px;}
+
+  /* shampoo option card */
+  .shampoo-option{
+    border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;margin-bottom:8px;
+    cursor:pointer;transition:all .12s ease;
+  }
+  .shampoo-option:hover{border-color:var(--sage);}
+  .shampoo-option.selected{border-color:var(--sage);background:var(--sage-soft);}
+  .shampoo-option .name{font-size:13.5px;font-weight:500;}
+  .shampoo-option .desc{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+
+  /* ---- Buttons ---- */
+  .btn{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:11px 22px;border-radius:999px;border:1px solid var(--ink);
+    background:var(--ink);color:var(--paper);font-size:13.5px;letter-spacing:.03em;font-weight:500;
+    transition:opacity .15s;
+  }
+  .btn:hover{opacity:.85;}
+  .btn.secondary{background:transparent;color:var(--ink);border-color:var(--line);}
+  .btn.danger{background:transparent;color:var(--clay);border-color:var(--clay-soft);}
+  .btn.danger:hover{background:var(--clay-soft);}
+  .form-actions{display:flex;justify-content:space-between;align-items:center;padding:22px 28px;border-top:1px solid var(--line);gap:12px;flex-wrap:wrap;}
+
+  /* ---- List view ---- */
+  .list-toolbar{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:center;justify-content:space-between;}
+  .search-box{position:relative;flex:1;min-width:220px;}
+  .search-box input{width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:999px;background:#fff;outline:none;}
+  .search-box input:focus{border-color:var(--sage);}
+
+  .record-tag{
+    display:flex;align-items:center;gap:16px;padding:16px 20px;border:1px solid var(--line);
+    border-radius:var(--radius);background:#fff;margin-bottom:10px;cursor:pointer;transition:border-color .12s;
+  }
+  .record-tag:hover{border-color:var(--sage);}
+  .record-tag .punch{width:10px;height:10px;border-radius:50%;background:var(--paper);border:1px solid var(--line);flex-shrink:0;}
+  .record-tag .info{flex:1;min-width:0;}
+  .record-tag .dog{font-weight:500;font-size:14.5px;}
+  .record-tag .meta{font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
+  .record-tag .date{font-size:12px;color:var(--ink-soft);text-align:right;white-space:nowrap;}
+  .record-tag .flags{display:flex;gap:5px;flex-shrink:0;}
+  .record-tag .flags .dot{width:7px;height:7px;border-radius:50%;}
+
+  .empty-state{text-align:center;padding:64px 24px;color:var(--ink-soft);}
+  .empty-state .stamp{
+    width:48px;height:48px;border-radius:50%;border:1px solid var(--line);margin:0 auto 16px;
+    display:flex;align-items:center;justify-content:center;color:var(--line);font-size:20px;
+  }
+
+  /* ---- Detail view ---- */
+  .detail-header{display:flex;justify-content:space-between;align-items:flex-start;padding:26px 28px;border-bottom:1px solid var(--line);gap:16px;flex-wrap:wrap;}
+  .detail-header h2{font-size:22px;}
+  .detail-header .sub{color:var(--ink-soft);font-size:13px;margin-top:4px;}
+  .detail-actions{display:flex;gap:8px;}
+  .detail-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:2px 24px;padding:22px 28px;}
+  @media(max-width:640px){.detail-grid{grid-template-columns:1fr;}}
+  .detail-item{padding:10px 0;border-bottom:1px solid var(--line-soft);}
+  .detail-item label{display:block;font-size:11px;color:var(--ink-soft);letter-spacing:.04em;text-transform:uppercase;margin-bottom:4px;}
+  .detail-item .val{font-size:14px;}
+  .detail-item .val.empty{color:var(--ink-soft);font-style:italic;}
+  .tag-chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;}
+  .tag-chip .dot{width:6px;height:6px;border-radius:50%;}
+
+  .loading{text-align:center;padding:60px;color:var(--ink-soft);font-size:13px;}
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:var(--paper);padding:12px 22px;border-radius:999px;
+    font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.18);z-index:100;opacity:0;transition:opacity .2s,transform .2s;
+    pointer-events:none;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand-mark">
+      <div class="stamp">犬</div>
+      <div>
+        <h1>Grooming Log</h1>
+        <div class="eyebrow">Customer &amp; care records</div>
+      </div>
+    </div>
+    <nav class="tabs">
+      <button data-tab="list" class="active">All Records</button>
+      <button data-tab="form">New Record</button>
+    </nav>
+  </div>
+</div>
+
+<main id="app"></main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ======================= CONFIGURATION ======================= */
+// Paste the Web App URL you get from deploying Code.gs here:
+const APPS_SCRIPT_URL = "PASTE_YOUR_APPS_SCRIPT_WEB_APP_URL_HERE";
+/* ================================================================ */
+
+const PRE_ASSESSMENT = [
+  { key:'Eyes', label:'Eyes', options:[['Normal','ok'],['Redness','warn'],['Discharge','warn'],['Other','neutral']] },
+  { key:'Ears', label:'Ears', options:[['Clean','ok'],['Dirty','warn'],['Odor','warn'],['Infection','warn'],['Other','neutral']] },
+  { key:'Oral', label:'Oral', options:[['Normal','ok'],['Bad Breath','warn'],['Inflamed','warn'],['Bleeding','warn'],['Plaque/Tartar','warn'],['Other','neutral']] },
+  { key:'Anal', label:'Anal', options:[['Normal','ok'],['Redness/Irritation','warn'],['Discharge','warn'],['Other','neutral']] },
+  { key:'Nail', label:'Nail', options:[['Normal','ok'],['Overgrown','warn'],['Ingrown','warn'],['Broken','warn'],['Infected','warn'],['Other','neutral']] },
+  { key:'Skin', label:'Skin', options:[['None','ok'],['Redness/Irritation','warn'],['Infection','warn'],['Dandruff','warn'],['Oily','warn'],['Flea/Ticks','warn'],['Other','neutral']] },
+  { key:'Coat', label:'Coat', options:[['Normal','ok'],['Thin','warn'],['Matting','warn'],['Excessive Shedding','warn'],['Other','neutral']] },
+];
+const MATS = { key:'Mats', label:'Mats', options:[['None','ok'],['Mild','warn'],['Moderate','warn'],['Severe','warn']] };
+const SERVICE = { key:'Service Required', label:'Service Required', options:[['Full Grooming','neutral'],['Basic Grooming','neutral'],['Bath & Fluff','neutral'],['Other','neutral']] };
+const TEMPERAMENT = { key:'Temperament', label:'Temperament & Behavior During Grooming', options:[['Calm','ok'],['Playful','ok'],['Wriggly','warn'],['Anxious/Whining','warn'],['Nervous','warn'],['Aggressive','warn'],['Other','neutral']] };
+const GENDER = { key:'Gender', label:'Gender', options:[['Male','neutral'],['Female','neutral'],['Male (Neutered)','neutral'],['Female (Spayed)','neutral']] };
+
+const SHAMPOOS = [
+  { name:'Plush Puppy All Purpose Shampoo', desc:'Eye-popping shine and a lovely fresh coat' },
+  { name:'Plush Puppy Natural Conditioning Shampoo', desc:'Increases hydration while softening the coat' },
+  { name:'Plush Puppy Herbal Whitening Shampoo', desc:'Whitens whites and intensifies darker colours' },
+  { name:'Plush Puppy Deep Cleansing Shampoo', desc:'Deep cleaning and clarifying' },
+  { name:'Dermcare Malaseb Shampoo', desc:'Medicated shampoo for bacterial and fungal skin infections' },
+  { name:'Own Product Provided', desc:'Client supplied their own shampoo/product' },
+  { name:'Other', desc:'' },
+];
+
+let state = { tab:'list', records:[], loading:false, search:'', editingId:null, formData:{}, detailId:null };
+
+/* ------------------------- API ------------------------- */
+function configured(){ return APPS_SCRIPT_URL && APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === -1; }
+
+async function apiList(){
+  const res = await fetch(APPS_SCRIPT_URL + '?action=list');
+  const json = await res.json();
+  if(!json.success) throw new Error(json.error || 'Failed to load records');
+  return json.records;
+}
+async function apiCreate(data){
+  const res = await fetch(APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify({action:'create', data}) });
+  return res.json();
+}
+async function apiUpdate(id, data){
+  const res = await fetch(APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify({action:'update', id, data}) });
+  return res.json();
+}
+async function apiDelete(id){
+  const res = await fetch(APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify({action:'delete', id}) });
+  return res.json();
+}
+
+/* ------------------------- Helpers ------------------------- */
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2200);
+}
+function esc(s){ return (s===undefined||s===null) ? '' : String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function todayStr(){ const d=new Date(); return d.toISOString().slice(0,10); }
+
+async function refreshRecords(){
+  state.loading = true; render();
+  try{
+    state.records = await apiList();
+  }catch(err){
+    showToast('Could not load records — check your setup');
+    console.error(err);
+  }
+  state.loading = false; render();
+}
+
+/* ------------------------- Rendering ------------------------- */
+function render(){
+  document.querySelectorAll('nav.tabs button').forEach(b=>{
+    b.classList.toggle('active', b.dataset.tab === state.tab || (state.tab==='detail' && b.dataset.tab==='list') || (state.tab==='edit' && b.dataset.tab==='form'));
+  });
+  const app = document.getElementById('app');
+  if(!configured()){
+    app.innerHTML = configBanner() + emptyConfigState();
+    return;
+  }
+  if(state.tab === 'list') app.innerHTML = configBannerIfNeeded() + renderList();
+  else if(state.tab === 'detail') app.innerHTML = renderDetail();
+  else if(state.tab === 'form' || state.tab === 'edit') app.innerHTML = renderForm();
+  attachHandlers();
+}
+
+function configBanner(){
+  return `<div class="config-banner">
+    <strong>One step left:</strong> open <code>Code.gs</code>, deploy it as a Web App in Google Apps Script,
+    then paste the Web App URL into <code>APPS_SCRIPT_URL</code> near the top of this file's script.
+  </div>`;
+}
+function configBannerIfNeeded(){ return ''; }
+function emptyConfigState(){
+  return `<div class="card empty-state"><div class="stamp">犬</div>
+    <div style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:6px;">Not connected yet</div>
+    <div>This page will list and log grooming records once it's linked to your Google Sheet.</div>
+  </div>`;
+}
+
+/* ---- List ---- */
+function renderList(){
+  if(state.loading) return `<div class="loading">Loading records…</div>`;
+  const q = state.search.trim().toLowerCase();
+  const filtered = state.records.filter(r=>{
+    if(!q) return true;
+    return (String(r['Dog Name']||'').toLowerCase().includes(q)) || (String(r['Owner Name']||'').toLowerCase().includes(q)) || (String(r['Breed']||'').toLowerCase().includes(q));
+  });
+  let html = `<div class="list-toolbar">
+    <div class="search-box"><input id="searchInput" type="text" placeholder="Search by dog, owner, or breed…" value="${esc(state.search)}"></div>
+    <button class="btn" id="newRecordBtn">+ New Record</button>
+  </div>`;
+  if(filtered.length === 0){
+    html += `<div class="card empty-state"><div class="stamp">犬</div>
+      <div style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:6px;">${state.records.length===0 ? 'No records yet' : 'No matches'}</div>
+      <div>${state.records.length===0 ? 'Log your first grooming visit to get started.' : 'Try a different search.'}</div>
+    </div>`;
+    return html;
+  }
+  html += filtered.map(r=>{
+    const flags = [];
+    PRE_ASSESSMENT.forEach(cat=>{
+      const val = r[cat.key];
+      const opt = cat.options.find(o=>o[0]===val);
+      if(opt && opt[1]==='warn') flags.push('warn');
+    });
+    const flagHtml = flags.slice(0,4).map(()=>`<span class="dot" style="background:var(--clay)"></span>`).join('');
+    return `<div class="record-tag" data-id="${esc(r['Record ID'])}">
+      <span class="punch"></span>
+      <div class="info">
+        <div class="dog">${esc(r['Dog Name']||'Unnamed')} <span style="color:var(--ink-soft);font-weight:400;">— ${esc(r['Owner Name']||'')}</span></div>
+        <div class="meta">${esc(r['Breed']||'—')} · ${esc(r['Service Required']||'—')}</div>
+      </div>
+      <div class="flags">${flagHtml}</div>
+      <div class="date">${esc(r['Date of Grooming']||'')}</div>
+    </div>`;
+  }).join('');
+  return html;
+}
+
+/* ---- Detail ---- */
+function renderDetail(){
+  const r = state.records.find(x=>x['Record ID']===state.detailId);
+  if(!r) return `<div class="empty-state">Record not found.</div>`;
+  function item(label, val){
+    return `<div class="detail-item"><label>${esc(label)}</label><div class="val ${val?'':'empty'}">${val?esc(val):'Not recorded'}</div></div>`;
+  }
+  function tagItem(label, key, options){
+    const val = r[key];
+    const opt = options.find(o=>o[0]===val);
+    const color = opt ? ({ok:'var(--sage)',warn:'var(--clay)',neutral:'var(--ink)'}[opt[1]]) : 'var(--ink-soft)';
+    return `<div class="detail-item"><label>${esc(label)}</label><div class="val ${val?'':'empty'}">
+      ${val ? `<span class="tag-chip"><span class="dot" style="background:${color}"></span>${esc(val)}</span>` : 'Not recorded'}
+    </div></div>`;
+  }
+  let html = `<div class="card">
+    <div class="detail-header">
+      <div>
+        <h2>${esc(r['Dog Name']||'Unnamed')}</h2>
+        <div class="sub">${esc(r['Owner Name']||'')} · Groomed ${esc(r['Date of Grooming']||'—')}</div>
+      </div>
+      <div class="detail-actions">
+        <button class="btn secondary" id="editBtn">Edit</button>
+        <button class="btn danger" id="deleteBtn">Delete</button>
+      </div>
+    </div>
+    <div class="detail-grid">
+      ${item('Breed', r['Breed'])}
+      ${tagItem('Gender', 'Gender', GENDER.options)}
+      ${item('Weight (kg)', r['Weight (kg)'])}
+      ${tagItem('Service Required', 'Service Required', SERVICE.options)}
+    </div>
+    <div class="section" style="padding-top:6px;">
+      <div class="section-title"><span class="num">01</span><h2>Pre-Assessment</h2></div>
+      <div class="detail-grid">
+        ${PRE_ASSESSMENT.map(cat => tagItem(cat.label, cat.key, cat.options) + (r[cat.key+' Notes'] ? `<div class="detail-item"><label>${esc(cat.label)} Notes</label><div class="val">${esc(r[cat.key+' Notes'])}</div></div>` : '')).join('')}
+        ${tagItem('Mats', 'Mats', MATS.options)}
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title"><span class="num">02</span><h2>Temperament &amp; Notes</h2></div>
+      <div class="detail-grid">
+        ${tagItem('Temperament', 'Temperament', TEMPERAMENT.options)}
+        ${item('Shampoo Used', r['Shampoo Used'])}
+      </div>
+      ${item('Specific Request / Style Notes', r['Style Notes'])}
+      ${item('Additional Notes', r['Additional Notes'])}
+    </div>
+  </div>`;
+  return html;
+}
+
+/* ---- Form ---- */
+function pillGroup(cat, selected, groupClass){
+  return `<div class="pill-group" data-key="${esc(cat.key)}">
+    ${cat.options.map(([label,tone])=>`
+      <button type="button" class="pill ${selected===label?'selected '+tone:''}" data-value="${esc(label)}">
+        <span class="dot"></span>${esc(label)}
+      </button>`).join('')}
+  </div>`;
+}
+
+function renderForm(){
+  const d = state.formData;
+  const isEdit = state.tab === 'edit';
+  let html = `<div class="card">
+    <div class="section">
+      <div class="section-title"><span class="num">01</span><h2>Dog &amp; Owner</h2></div>
+      <div class="row">
+        <div class="field"><label>Dog Name</label><input type="text" id="f_DogName" value="${esc(d['Dog Name'])}" placeholder="e.g. Mochi"></div>
+        <div class="field"><label>Owner Name</label><input type="text" id="f_OwnerName" value="${esc(d['Owner Name'])}" placeholder="e.g. Lim Wei"></div>
+      </div>
+      <div class="row3">
+        <div class="field"><label>Date of Grooming</label><input type="date" id="f_Date" value="${esc(d['Date of Grooming']||todayStr())}"></div>
+        <div class="field"><label>Breed</label><input type="text" id="f_Breed" value="${esc(d['Breed'])}" placeholder="e.g. Poodle"></div>
+        <div class="field"><label>Weight (kg)</label><input type="number" step="0.1" id="f_Weight" value="${esc(d['Weight (kg)'])}"></div>
+      </div>
+      <div class="field"><label>Gender</label>${pillGroup(GENDER, d['Gender'])}</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="num">02</span><h2>Pre-Assessment</h2></div>
+      ${PRE_ASSESSMENT.map(cat=>`
+        <div class="field">
+          <label>${esc(cat.label)}</label>
+          ${pillGroup(cat, d[cat.key])}
+          <div class="assess-note"><input type="text" id="f_${esc(cat.key)}Notes" placeholder="Notes (optional)" value="${esc(d[cat.key+' Notes'])}"></div>
+        </div>`).join('')}
+      <div class="field"><label>Mats</label>${pillGroup(MATS, d['Mats'])}</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="num">03</span><h2>Service &amp; Behavior</h2></div>
+      <div class="field"><label>Service Required</label>${pillGroup(SERVICE, d['Service Required'])}
+        ${d['Service Required']==='Other' ? `<div class="assess-note"><input type="text" id="f_ServiceNotes" placeholder="Describe service" value="${esc(d['Service Notes'])}"></div>` : ''}
+      </div>
+      <div class="field"><label>Temperament &amp; Behavior During Grooming</label>${pillGroup(TEMPERAMENT, d['Temperament'])}
+        ${d['Temperament']==='Other' ? `<div class="assess-note"><input type="text" id="f_TemperamentNotes" placeholder="Describe behavior" value="${esc(d['Temperament Notes'])}"></div>` : ''}
+      </div>
+      <div class="field"><label>Specific Request / Style Notes</label><textarea id="f_StyleNotes" placeholder="e.g. Teddy bear face trim, short body 4mm...">${esc(d['Style Notes'])}</textarea></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="num">04</span><h2>Shampoo Used</h2></div>
+      <div id="shampooOptions">
+        ${SHAMPOOS.map(s=>`
+          <div class="shampoo-option ${d['Shampoo Used']===s.name?'selected':''}" data-value="${esc(s.name)}">
+            <div class="name">${esc(s.name)}</div>
+            ${s.desc ? `<div class="desc">${esc(s.desc)}</div>` : ''}
+          </div>`).join('')}
+      </div>
+      ${d['Shampoo Used']==='Other' ? `<div class="assess-note" style="margin-top:10px;"><input type="text" id="f_ShampooNotes" placeholder="Which product?" value="${esc(d['Shampoo Notes'])}"></div>` : ''}
+    </div>
+
+    <div class="section">
+      <div class="section-title"><span class="num">05</span><h2>Additional Notes</h2></div>
+      <div class="field"><textarea id="f_AdditionalNotes" placeholder="Anything else worth remembering for next time...">${esc(d['Additional Notes'])}</textarea></div>
+    </div>
+
+    <div class="form-actions">
+      <button class="btn secondary" id="cancelFormBtn">Cancel</button>
+      <button class="btn" id="saveFormBtn">${isEdit ? 'Save Changes' : 'Save Record'}</button>
+    </div>
+  </div>`;
+  return html;
+}
+
+/* ------------------------- Handlers ------------------------- */
+function attachHandlers(){
+  document.querySelectorAll('nav.tabs button').forEach(b=>{
+    b.onclick = ()=>{
+      if(b.dataset.tab === 'form'){ state.formData = {}; state.editingId = null; state.tab = 'form'; }
+      else { state.tab = 'list'; }
+      render();
+    };
+  });
+
+  const newBtn = document.getElementById('newRecordBtn');
+  if(newBtn) newBtn.onclick = ()=>{ state.formData = {}; state.editingId = null; state.tab = 'form'; render(); };
+
+  const searchInput = document.getElementById('searchInput');
+  if(searchInput){
+    searchInput.oninput = (e)=>{ state.search = e.target.value; render(); document.getElementById('searchInput').focus(); document.getElementById('searchInput').selectionStart = document.getElementById('searchInput').value.length; };
+  }
+
+  document.querySelectorAll('.record-tag').forEach(el=>{
+    el.onclick = ()=>{ state.detailId = el.dataset.id; state.tab = 'detail'; render(); };
+  });
+
+  const editBtn = document.getElementById('editBtn');
+  if(editBtn) editBtn.onclick = ()=>{
+    const r = state.records.find(x=>x['Record ID']===state.detailId);
+    state.formData = Object.assign({}, r);
+    state.editingId = state.detailId;
+    state.tab = 'edit';
+    render();
+  };
+  const deleteBtn = document.getElementById('deleteBtn');
+  if(deleteBtn) deleteBtn.onclick = async ()=>{
+    if(!confirm('Delete this record? This cannot be undone.')) return;
+    try{
+      await apiDelete(state.detailId);
+      showToast('Record deleted');
+      state.tab = 'list';
+      await refreshRecords();
+    }catch(err){ showToast('Could not delete'); console.error(err); }
+  };
+
+  // pill groups
+  document.querySelectorAll('.pill-group').forEach(group=>{
+    group.querySelectorAll('.pill').forEach(pill=>{
+      pill.onclick = ()=>{
+        const key = group.dataset.key;
+        state.formData[key] = pill.dataset.value;
+        render();
+      };
+    });
+  });
+
+  // shampoo options
+  document.querySelectorAll('.shampoo-option').forEach(opt=>{
+    opt.onclick = ()=>{
+      state.formData['Shampoo Used'] = opt.dataset.value;
+      render();
+    };
+  });
+
+  const cancelBtn = document.getElementById('cancelFormBtn');
+  if(cancelBtn) cancelBtn.onclick = ()=>{ state.tab = state.editingId ? 'detail' : 'list'; render(); };
+
+  const saveBtn = document.getElementById('saveFormBtn');
+  if(saveBtn) saveBtn.onclick = async ()=>{
+    collectFormData();
+    if(!state.formData['Dog Name']){ showToast('Please enter a dog name'); return; }
+    saveBtn.textContent = 'Saving…'; saveBtn.disabled = true;
+    try{
+      if(state.editingId){
+        await apiUpdate(state.editingId, state.formData);
+        showToast('Record updated');
+      }else{
+        await apiCreate(state.formData);
+        showToast('Record saved');
+      }
+      state.tab = 'list';
+      await refreshRecords();
+    }catch(err){
+      showToast('Could not save — check connection');
+      console.error(err);
+      saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record'; saveBtn.disabled = false;
+    }
+  };
+}
+
+function collectFormData(){
+  const d = state.formData;
+  const map = {
+    'Dog Name':'f_DogName','Owner Name':'f_OwnerName','Date of Grooming':'f_Date','Breed':'f_Breed','Weight (kg)':'f_Weight',
+    'Style Notes':'f_StyleNotes','Additional Notes':'f_AdditionalNotes','Service Notes':'f_ServiceNotes',
+    'Temperament Notes':'f_TemperamentNotes','Shampoo Notes':'f_ShampooNotes'
+  };
+  PRE_ASSESSMENT.forEach(cat=>{ map[cat.key+' Notes'] = 'f_'+cat.key+'Notes'; });
+  Object.entries(map).forEach(([k,id])=>{
+    const el = document.getElementById(id);
+    if(el) d[k] = el.value;
+  });
+}
+
+/* ------------------------- Init ------------------------- */
+render();
+if(configured()) refreshRecords();
+</script>
+</body>
+</html>
