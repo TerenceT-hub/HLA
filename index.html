@@ -88,6 +88,7 @@
     border-radius:var(--radius);
     box-shadow:var(--shadow);
   }
+  
 
   /* ---- Config banner ---- */
   .config-banner{
@@ -221,7 +222,184 @@
   .month-row .m-label{font-weight:500;font-size:14.5px;}
   .month-row .m-meta{font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
   .month-row .m-total{font-family:'Shippori Mincho',serif;font-size:17px;color:var(--sage);}
-
+    /* ---- Revenue trend enhancements ---- */
+  .revenue-summary .stat .num.clay {
+    color: var(--clay);
+  }
+  
+  .trend-chart-container {
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:20px;
+    overflow-x:auto;
+    margin-bottom:24px;
+  }
+  
+  .trend-chart {
+    display:flex;
+    align-items:flex-end;
+    gap:8px;
+    min-height:200px;
+    padding-bottom:30px;
+    position:relative;
+  }
+  
+  .trend-chart .bar-wrapper {
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    min-width:40px;
+  }
+  
+  .trend-chart .bar-stack {
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:2px;
+  }
+  
+  .trend-chart .bar-discount {
+    width:24px;
+    background:var(--clay-soft);
+    border-radius:2px 2px 0 0;
+    opacity:0.7;
+    transition:height 0.3s ease;
+  }
+  
+  .trend-chart .bar-revenue {
+    width:24px;
+    background:var(--sage);
+    border-radius:2px 2px 0 0;
+    position:relative;
+    transition:height 0.3s ease;
+  }
+  
+  .trend-chart .bar-revenue.small {
+    width:32px;
+    background:var(--sage-soft);
+  }
+  
+  .trend-chart .bar-value {
+    position:absolute;
+    top:-20px;
+    left:50%;
+    transform:translateX(-50%);
+    font-size:10px;
+    color:var(--ink-soft);
+    white-space:nowrap;
+  }
+  
+  .trend-chart .bar-label {
+    font-size:10px;
+    color:var(--ink-soft);
+    text-align:center;
+    margin-top:4px;
+  }
+  
+  .trend-chart .bar-count {
+    font-size:9px;
+    color:var(--ink-soft);
+  }
+  
+  .trend-chart .bar-discount-label {
+    font-size:8px;
+    color:var(--clay);
+  }
+  
+  .trend-legend {
+    display:flex;
+    gap:16px;
+    justify-content:center;
+    font-size:11px;
+    color:var(--ink-soft);
+    border-top:1px solid var(--line-soft);
+    padding-top:12px;
+    margin-top:8px;
+  }
+  
+  .trend-legend .legend-item {
+    display:flex;
+    align-items:center;
+    gap:4px;
+  }
+  
+  .trend-legend .legend-color {
+    display:inline-block;
+    width:12px;
+    height:12px;
+    border-radius:2px;
+    vertical-align:middle;
+  }
+  
+  .trend-legend .legend-color.sage {
+    background:var(--sage);
+  }
+  
+  .trend-legend .legend-color.clay {
+    background:var(--clay-soft);
+  }
+  
+  .daily-grid {
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-bottom:24px;
+  }
+  
+  @media(max-width:640px) {
+    .daily-grid {
+      grid-template-columns:1fr;
+    }
+  }
+  
+  .daily-card {
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:14px 16px;
+  }
+  
+  .daily-card .date-label {
+    font-weight:500;
+    font-size:13px;
+    margin-bottom:4px;
+  }
+  
+  .daily-card .revenue-row {
+    display:flex;
+    justify-content:space-between;
+    font-size:13px;
+  }
+  
+  .daily-card .discount-row {
+    display:flex;
+    justify-content:space-between;
+    font-size:12px;
+    color:var(--clay);
+    margin-top:2px;
+  }
+  
+  .daily-card .no-discount {
+    font-size:11px;
+    color:var(--ink-soft);
+    margin-top:2px;
+  }
+  
+  .daily-card .dog-list {
+    margin-top:6px;
+    font-size:11px;
+    color:var(--ink-soft);
+  }
+  
+  .section-header {
+    font-family:'Shippori Mincho',serif;
+    font-size:16px;
+    margin-bottom:12px;
+  }
   /* ---- Print / PDF export ---- */
   #printArea{display:none;}
   @media print{
@@ -732,11 +910,6 @@ function renderRevenue(){
     </div>`;
   }
   return html;
-}
-
-  /* Revenue trend enhancements */
-.revenue-summary .stat .num.clay {
-  color: var(--clay);
 }
 
 /* ---- PDF export ---- */
