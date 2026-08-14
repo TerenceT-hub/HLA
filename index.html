@@ -445,10 +445,14 @@ function renderDetail(){
   }
   function tagItem(label, key, options){
     const val = r[key];
-    const opt = options.find(o=>o[0]===val);
-    const color = opt ? ({ok:'var(--sage)',warn:'var(--clay)',neutral:'var(--ink)'}[opt[1]]) : 'var(--ink-soft)';
+    const values = parseMultiValue(val);
+    const chips = values.map(v=>{
+      const opt = options.find(o=>o[0]===v);
+      const color = opt ? ({ok:'var(--sage)',warn:'var(--clay)',neutral:'var(--ink)'}[opt[1]]) : 'var(--ink-soft)';
+      return `<span class="tag-chip" style="margin-right:12px;"><span class="dot" style="background:${color}"></span>${esc(v)}</span>`;
+    }).join('');
     return `<div class="detail-item"><label>${esc(label)}</label><div class="val ${val?'':'empty'}">
-      ${val ? `<span class="tag-chip"><span class="dot" style="background:${color}"></span>${esc(val)}</span>` : 'Not recorded'}
+      ${val ? chips : 'Not recorded'}
     </div></div>`;
   }
   let html = `<div class="card">
@@ -498,7 +502,7 @@ function renderDetail(){
               <div class="dog">${esc(h['Service Required']||'Visit')}</div>
               <div class="meta">${esc(h['Temperament']||'—')}${h['Style Notes'] ? ' · '+esc(h['Style Notes']) : ''}</div>
             </div>
-            <div class="date">${esc(h['Date of Grooming']||'')}${h['Charges'] ? '<br>RM '+esc(h['Charges']) : ''}</div>
+            <div class="date">${esc(h['Date of Grooming']||'')}${h['Charges'] ? +esc(h['Charges']) : ''}</div>
           </div>`).join('')}
       </div>`;
     })()}
@@ -534,9 +538,9 @@ function renderRevenue(){
   const avg = grandCount ? (grandTotal/grandCount) : 0;
 
   let html = `<div class="revenue-summary">
-    <div class="stat"><div class="eyebrow">Total Revenue</div><div class="num">RM ${grandTotal.toFixed(2)}</div></div>
+    <div class="stat"><div class="eyebrow">Total Revenue</div><div class="num"> ${grandTotal.toFixed(2)}</div></div>
     <div class="stat"><div class="eyebrow">Total Records</div><div class="num">${grandCount}</div></div>
-    <div class="stat"><div class="eyebrow">Avg. per Groom</div><div class="num">RM ${avg.toFixed(2)}</div></div>
+    <div class="stat"><div class="eyebrow">Avg. per Groom</div><div class="num"> ${avg.toFixed(2)}</div></div>
   </div>`;
 
   if(months.length === 0){
@@ -553,13 +557,13 @@ function renderRevenue(){
         <div class="m-label">${esc(monthLabel(k))}</div>
         <div class="m-meta">${byMonth[k].count} record${byMonth[k].count===1?'':'s'}</div>
       </div>
-      <div class="m-total">RM ${byMonth[k].total.toFixed(2)}</div>
+      <div class="m-total"> ${byMonth[k].total.toFixed(2)}</div>
     </div>`).join('');
 
   if(byMonth['unspecified']){
     html += `<div class="month-row">
       <div><div class="m-label">Undated records</div><div class="m-meta">${byMonth['unspecified'].count} record(s) without a grooming date</div></div>
-      <div class="m-total">RM ${byMonth['unspecified'].total.toFixed(2)}</div>
+      <div class="m-total"> ${byMonth['unspecified'].total.toFixed(2)}</div>
     </div>`;
   }
   return html;
@@ -597,12 +601,12 @@ function exportRecordAsPdf(r){
     </div>
     <h3>Service Notes</h3>
     <div class="p-grid">
-      ${row('Temperament', r['Temperament'])}
-      ${row('Shampoo Used', r['Shampoo Used'])}
+      ${row('Temperament', formatMultiValue(r['Temperament']))}
+      ${row('Shampoo Used', formatMultiValue(r['Shampoo Used']))}
     </div>
     ${r['Style Notes'] ? `<div style="font-size:13px;margin-top:8px;"><span class="k" style="color:#777;font-size:10.5px;text-transform:uppercase;">Style Notes</span>${esc(r['Style Notes'])}</div>` : ''}
     ${r['Additional Notes'] ? `<div style="font-size:13px;margin-top:8px;"><span class="k" style="color:#777;font-size:10.5px;text-transform:uppercase;">Additional Notes</span>${esc(r['Additional Notes'])}</div>` : ''}
-    <div class="p-charge"><span>Total Charges</span><span>RM ${r['Charges'] ? parseFloat(r['Charges']).toFixed(2) : '0.00'}</span></div>
+    <div class="p-charge"><span>Total Charges</span><span> ${r['Charges'] ? parseFloat(r['Charges']).toFixed(2) : '0.00'}</span></div>
     <div class="p-footer">Thank you for trusting ${esc(BUSINESS_NAME)} with your dog's grooming.</div>
   </div>`;
   window.print();
@@ -632,7 +636,7 @@ function renderVisitHistoryBox(dogName, ownerName){
       <label style="color:var(--sage);margin-bottom:8px;">Previous Visits — ${esc(dogName)}</label>
       ${history.slice(0,5).map(h=>`<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.06);">
         <span>${esc(h['Date of Grooming']||'—')} · ${esc(h['Service Required']||'—')}</span>
-        <span style="color:var(--ink-soft);">${h['Charges'] ? 'RM '+esc(h['Charges']) : ''}</span>
+        <span style="color:var(--ink-soft);">${h['Charges'] ? ' '+esc(h['Charges']) : ''}</span>
       </div>`).join('')}
       <div style="font-size:11.5px;color:var(--ink-soft);margin-top:8px;">Breed and gender were filled in from their last visit — adjust anything that's changed.</div>
     </div>
@@ -641,12 +645,25 @@ function renderVisitHistoryBox(dogName, ownerName){
 
 /* ---- Form ---- */
 function pillGroup(cat, selected, groupClass){
-  return `<div class="pill-group" data-key="${esc(cat.key)}">
+  const selectedValues = Array.isArray(selected) ? selected : String(selected||'').split(',').map(v=>v.trim()).filter(Boolean);
+  return `<div class="pill-group ${groupClass||''}" data-key="${esc(cat.key)}">
     ${cat.options.map(([label,tone])=>`
-      <button type="button" class="pill ${selected===label?'selected '+tone:''}" data-value="${esc(label)}">
+      <button type="button" class="pill ${selectedValues.includes(label)?'selected '+tone:''}" data-value="${esc(label)}">
         <span class="dot"></span>${esc(label)}
       </button>`).join('')}
   </div>`;
+}
+
+function multiPillGroup(cat, selected){
+  return pillGroup(cat, selected, 'multi-select');
+}
+
+function parseMultiValue(val){
+  return String(val||'').split(',').map(v=>v.trim()).filter(Boolean);
+}
+
+function formatMultiValue(val){
+  return parseMultiValue(val).join(', ');
 }
 
 function renderForm(){
@@ -687,8 +704,8 @@ function renderForm(){
         ${d['Service Required']==='Other' ? `<div class="assess-note"><input type="text" id="f_ServiceNotes" placeholder="Describe service" value="${esc(d['Service Notes'])}"></div>` : ''}
       </div>
       <div class="field" style="max-width:220px;"><label>Charges</label><input type="number" step="0.01" id="f_Charges" value="${esc(d['Charges'])}" placeholder="0.00"></div>
-      <div class="field"><label>Temperament &amp; Behavior During Grooming</label>${pillGroup(TEMPERAMENT, d['Temperament'])}
-        ${d['Temperament']==='Other' ? `<div class="assess-note"><input type="text" id="f_TemperamentNotes" placeholder="Describe behavior" value="${esc(d['Temperament Notes'])}"></div>` : ''}
+      <div class="field"><label>Temperament &amp; Behavior During Grooming</label>${multiPillGroup(TEMPERAMENT, d['Temperament'])}
+        ${parseMultiValue(d['Temperament']).includes('Other') ? `<div class="assess-note"><input type="text" id="f_TemperamentNotes" placeholder="Describe behavior" value="${esc(d['Temperament Notes'])}"></div>` : ''}
       </div>
       <div class="field"><label>Specific Request / Style Notes</label><textarea id="f_StyleNotes" placeholder="e.g. Teddy bear face trim, short body 4mm...">${esc(d['Style Notes'])}</textarea></div>
     </div>
@@ -697,12 +714,12 @@ function renderForm(){
       <div class="section-title"><span class="num">04</span><h2>Shampoo Used</h2></div>
       <div id="shampooOptions">
         ${SHAMPOOS.map(s=>`
-          <div class="shampoo-option ${d['Shampoo Used']===s.name?'selected':''}" data-value="${esc(s.name)}">
+          <div class="shampoo-option ${parseMultiValue(d['Shampoo Used']).includes(s.name)?'selected':''}" data-value="${esc(s.name)}">
             <div class="name">${esc(s.name)}</div>
             ${s.desc ? `<div class="desc">${esc(s.desc)}</div>` : ''}
           </div>`).join('')}
       </div>
-      ${d['Shampoo Used']==='Other' ? `<div class="assess-note" style="margin-top:10px;"><input type="text" id="f_ShampooNotes" placeholder="Which product?" value="${esc(d['Shampoo Notes'])}"></div>` : ''}
+      ${parseMultiValue(d['Shampoo Used']).includes('Other') ? `<div class="assess-note" style="margin-top:10px;"><input type="text" id="f_ShampooNotes" placeholder="Which product?" value="${esc(d['Shampoo Notes'])}"></div>` : ''}
     </div>
 
     <div class="section">
@@ -765,23 +782,33 @@ function attachHandlers(){
     }catch(err){ showToast('Could not delete'); console.error(err); }
   };
 
-  // pill groups
+  // pill groups — Temperament supports multiple selections; all other groups remain single-select
   document.querySelectorAll('.pill-group').forEach(group=>{
     group.querySelectorAll('.pill').forEach(pill=>{
       pill.onclick = ()=>{
         collectFormData();
         const key = group.dataset.key;
-        state.formData[key] = pill.dataset.value;
+        if(key === 'Temperament'){
+          const current = parseMultiValue(state.formData[key]);
+          const value = pill.dataset.value;
+          const next = current.includes(value) ? current.filter(v=>v!==value) : [...current, value];
+          state.formData[key] = next.join(', ');
+        }else{
+          state.formData[key] = pill.dataset.value;
+        }
         render();
       };
     });
   });
 
-  // shampoo options
+  // shampoo options — multiple selections allowed
   document.querySelectorAll('.shampoo-option').forEach(opt=>{
     opt.onclick = ()=>{
       collectFormData();
-      state.formData['Shampoo Used'] = opt.dataset.value;
+      const current = parseMultiValue(state.formData['Shampoo Used']);
+      const value = opt.dataset.value;
+      const next = current.includes(value) ? current.filter(v=>v!==value) : [...current, value];
+      state.formData['Shampoo Used'] = next.join(', ');
       render();
     };
   });
