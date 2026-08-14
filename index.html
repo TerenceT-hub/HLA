@@ -547,6 +547,7 @@ function attachHandlers(){
   document.querySelectorAll('.pill-group').forEach(group=>{
     group.querySelectorAll('.pill').forEach(pill=>{
       pill.onclick = ()=>{
+        collectFormData();
         const key = group.dataset.key;
         state.formData[key] = pill.dataset.value;
         render();
@@ -557,6 +558,7 @@ function attachHandlers(){
   // shampoo options
   document.querySelectorAll('.shampoo-option').forEach(opt=>{
     opt.onclick = ()=>{
+      collectFormData();
       state.formData['Shampoo Used'] = opt.dataset.value;
       render();
     };
