@@ -624,11 +624,11 @@ function exportRecordAsPdf(r){
 <!-- PRICING SECTION -->
 <h3>Pricing</h3>
 <div class="p-grid" style="margin-bottom:12px;">
-  ${row('Base Price', r['Base Price'] ? '₱' + parseFloat(r['Base Price']).toFixed(2) : '—')}
+  ${row('Base Price', r['Base Price'] ? parseFloat(r['Base Price']).toFixed(2) : '—')}
   ${row('Discount', r['Discount (%)'] ? r['Discount (%)'] + '%' : '—')}
   ${row('Discount Notes', r['Discount Notes'] || '—')}
 </div>
-<div class="p-charge"><span>Total Charges</span><span>₱${finalCharge.toFixed(2)}</span></div>
+<div class="p-charge"><span>Total Charges</span><span>${finalCharge.toFixed(2)}</span></div>
     <div class="p-footer">${esc(BUSINESS_NAME)} | More than a haircut - A calm and comfortable grooming experience.</div>
   </div>`;
   window.print();
