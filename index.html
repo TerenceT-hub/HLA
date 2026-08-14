@@ -206,13 +206,46 @@
     pointer-events:none;
   }
   .toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
+
+  .brand-mark img.logo{width:34px;height:34px;border-radius:50%;object-fit:cover;flex-shrink:0;}
+
+  /* ---- Revenue tab ---- */
+  .revenue-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:0;margin-bottom:24px;overflow:hidden;border-radius:var(--radius);border:1px solid var(--line);}
+  @media(max-width:640px){.revenue-summary{grid-template-columns:1fr;}}
+  .revenue-summary .stat{background:#fff;padding:22px 24px;}
+  .revenue-summary .stat + .stat{border-left:1px solid var(--line);}
+  @media(max-width:640px){.revenue-summary .stat + .stat{border-left:none;border-top:1px solid var(--line);}}
+  .revenue-summary .stat .eyebrow{margin-bottom:8px;}
+  .revenue-summary .stat .num{font-family:'Shippori Mincho',serif;font-size:26px;}
+  .month-row{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border:1px solid var(--line);border-radius:var(--radius);background:#fff;margin-bottom:10px;}
+  .month-row .m-label{font-weight:500;font-size:14.5px;}
+  .month-row .m-meta{font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
+  .month-row .m-total{font-family:'Shippori Mincho',serif;font-size:17px;color:var(--sage);}
+
+  /* ---- Print / PDF export ---- */
+  #printArea{display:none;}
+  @media print{
+    body > *:not(#printArea){display:none !important;}
+    #printArea{display:block !important;}
+    .toast{display:none !important;}
+  }
+  .print-doc{max-width:680px;margin:0 auto;font-family:'Zen Kaku Gothic New',sans-serif;color:#222;padding:20px;}
+  .print-doc .p-head{display:flex;align-items:center;gap:14px;border-bottom:2px solid #222;padding-bottom:16px;margin-bottom:20px;}
+  .print-doc .p-head img{width:44px;height:44px;border-radius:50%;object-fit:cover;}
+  .print-doc .p-head .biz{font-family:'Shippori Mincho',serif;font-size:19px;font-weight:700;}
+  .print-doc .p-head .doc-title{margin-left:auto;text-align:right;font-size:12px;color:#666;}
+  .print-doc h3{font-family:'Shippori Mincho',serif;font-size:14px;border-bottom:1px solid #ddd;padding-bottom:6px;margin:20px 0 10px;}
+  .print-doc .p-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 20px;font-size:13px;margin-bottom:6px;}
+  .print-doc .p-grid div span.k{color:#777;display:block;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;}
+  .print-doc .p-charge{display:flex;justify-content:space-between;border-top:2px solid #222;margin-top:16px;padding-top:12px;font-size:16px;font-weight:700;}
+  .print-doc .p-footer{margin-top:28px;font-size:11.5px;color:#888;text-align:center;}
 </style>
 </head>
 <body>
 
 <div class="topbar">
   <div class="topbar-inner">
-    <div class="brand-mark">
+    <div class="brand-mark" id="brandMark">
       <div class="stamp">犬</div>
       <div>
         <h1>Grooming Log</h1>
@@ -222,6 +255,7 @@
     <nav class="tabs">
       <button data-tab="list" class="active">All Records</button>
       <button data-tab="form">New Record</button>
+      <button data-tab="revenue">Revenue</button>
     </nav>
   </div>
 </div>
@@ -230,10 +264,21 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- Printable record area: only visible when printing/exporting a PDF -->
+<div id="printArea"></div>
+
 <script>
 /* ======================= CONFIGURATION ======================= */
 // Paste the Web App URL you get from deploying Code.gs here:
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMbFKSzcX0-oLGIOuPVN_X1O4pSlZXkdXE2taYWkABR1vxFdKmce-jFHXlLMZtyP4YBQ/exec";
+
+// Branding — shown in the top bar and on exported PDFs.
+// BUSINESS_NAME: change to your business name.
+// LOGO_URL: upload your logo image into the same GitHub repo as this file
+// (e.g. logo.png) and set this to "logo.png" — or paste a full image URL.
+// Leave LOGO_URL as "" to keep the default paw stamp instead.
+const BUSINESS_NAME = "Grooming Log";
+const LOGO_URL = "logo.png";
 /* ================================================================ */
 
 const PRE_ASSESSMENT = [
@@ -261,6 +306,21 @@ const SHAMPOOS = [
 ];
 
 let state = { tab:'list', records:[], loading:false, search:'', editingId:null, formData:{}, detailId:null };
+
+function initBranding(){
+  document.title = BUSINESS_NAME;
+  const brand = document.getElementById('brandMark');
+  const nameEl = brand.querySelector('h1');
+  nameEl.textContent = BUSINESS_NAME;
+  if(LOGO_URL){
+    const stamp = brand.querySelector('.stamp');
+    const img = document.createElement('img');
+    img.className = 'logo';
+    img.src = LOGO_URL;
+    img.alt = BUSINESS_NAME + ' logo';
+    stamp.replaceWith(img);
+  }
+}
 
 /* ------------------------- API ------------------------- */
 function configured(){ return APPS_SCRIPT_URL && APPS_SCRIPT_URL.indexOf('PASTE_YOUR') === -1; }
@@ -318,6 +378,7 @@ function render(){
   if(state.tab === 'list') app.innerHTML = configBannerIfNeeded() + renderList();
   else if(state.tab === 'detail') app.innerHTML = renderDetail();
   else if(state.tab === 'form' || state.tab === 'edit') app.innerHTML = renderForm();
+  else if(state.tab === 'revenue') app.innerHTML = renderRevenue();
   attachHandlers();
 }
 
@@ -397,6 +458,7 @@ function renderDetail(){
         <div class="sub">${esc(r['Owner Name']||'')} · Groomed ${esc(r['Date of Grooming']||'—')}</div>
       </div>
       <div class="detail-actions">
+        <button class="btn secondary" id="exportPdfBtn">Export as PDF</button>
         <button class="btn secondary" id="editBtn">Edit</button>
         <button class="btn danger" id="deleteBtn">Delete</button>
       </div>
@@ -406,6 +468,7 @@ function renderDetail(){
       ${tagItem('Gender', 'Gender', GENDER.options)}
       ${item('Weight (kg)', r['Weight (kg)'])}
       ${tagItem('Service Required', 'Service Required', SERVICE.options)}
+      ${item('Charges (RM)', r['Charges (RM)'] ? 'RM ' + r['Charges (RM)'] : '')}
     </div>
     <div class="section" style="padding-top:6px;">
       <div class="section-title"><span class="num">01</span><h2>Pre-Assessment</h2></div>
@@ -425,6 +488,108 @@ function renderDetail(){
     </div>
   </div>`;
   return html;
+}
+
+/* ---- Revenue ---- */
+function monthKey(dateStr){
+  if(!dateStr) return null;
+  const d = new Date(dateStr);
+  if(isNaN(d)) return null;
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+}
+function monthLabel(key){
+  const [y,m] = key.split('-');
+  const d = new Date(Number(y), Number(m)-1, 1);
+  return d.toLocaleDateString('en-US', { month:'long', year:'numeric' });
+}
+function renderRevenue(){
+  const byMonth = {};
+  let grandTotal = 0, grandCount = 0;
+  state.records.forEach(r=>{
+    const charge = parseFloat(r['Charges (RM)']) || 0;
+    const key = monthKey(r['Date of Grooming']) || 'unspecified';
+    if(!byMonth[key]) byMonth[key] = { total:0, count:0 };
+    byMonth[key].total += charge;
+    byMonth[key].count += 1;
+    grandTotal += charge;
+    grandCount += 1;
+  });
+  const months = Object.keys(byMonth).filter(k=>k!=='unspecified').sort().reverse();
+  const avg = grandCount ? (grandTotal/grandCount) : 0;
+
+  let html = `<div class="revenue-summary">
+    <div class="stat"><div class="eyebrow">Total Revenue</div><div class="num">RM ${grandTotal.toFixed(2)}</div></div>
+    <div class="stat"><div class="eyebrow">Total Records</div><div class="num">${grandCount}</div></div>
+    <div class="stat"><div class="eyebrow">Avg. per Groom</div><div class="num">RM ${avg.toFixed(2)}</div></div>
+  </div>`;
+
+  if(months.length === 0){
+    html += `<div class="card empty-state"><div class="stamp">犬</div>
+      <div style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:6px;">No revenue yet</div>
+      <div>Charges you record against each groom will roll up here by month.</div>
+    </div>`;
+    return html;
+  }
+
+  html += months.map(k=>`
+    <div class="month-row">
+      <div>
+        <div class="m-label">${esc(monthLabel(k))}</div>
+        <div class="m-meta">${byMonth[k].count} record${byMonth[k].count===1?'':'s'}</div>
+      </div>
+      <div class="m-total">RM ${byMonth[k].total.toFixed(2)}</div>
+    </div>`).join('');
+
+  if(byMonth['unspecified']){
+    html += `<div class="month-row">
+      <div><div class="m-label">Undated records</div><div class="m-meta">${byMonth['unspecified'].count} record(s) without a grooming date</div></div>
+      <div class="m-total">RM ${byMonth['unspecified'].total.toFixed(2)}</div>
+    </div>`;
+  }
+  return html;
+}
+
+/* ---- PDF export ---- */
+function exportRecordAsPdf(r){
+  function row(label, val){
+    return `<div><span class="k">${esc(label)}</span>${val ? esc(val) : '—'}</div>`;
+  }
+  function tagVal(key, options){
+    const val = r[key];
+    return val || '—';
+  }
+  const printArea = document.getElementById('printArea');
+  printArea.innerHTML = `<div class="print-doc">
+    <div class="p-head">
+      ${LOGO_URL ? `<img src="${esc(LOGO_URL)}" alt="logo">` : ''}
+      <div class="biz">${esc(BUSINESS_NAME)}</div>
+      <div class="doc-title">Grooming Record<br>${esc(r['Date of Grooming']||'')}</div>
+    </div>
+    <h3>Dog &amp; Owner</h3>
+    <div class="p-grid">
+      ${row('Dog Name', r['Dog Name'])}
+      ${row('Owner Name', r['Owner Name'])}
+      ${row('Breed', r['Breed'])}
+      ${row('Gender', r['Gender'])}
+      ${row('Weight (kg)', r['Weight (kg)'])}
+      ${row('Service Required', r['Service Required'])}
+    </div>
+    <h3>Pre-Assessment</h3>
+    <div class="p-grid">
+      ${PRE_ASSESSMENT.map(cat=>row(cat.label, tagVal(cat.key) + (r[cat.key+' Notes'] ? ' — '+r[cat.key+' Notes'] : ''))).join('')}
+      ${row('Mats', r['Mats'])}
+    </div>
+    <h3>Service Notes</h3>
+    <div class="p-grid">
+      ${row('Temperament', r['Temperament'])}
+      ${row('Shampoo Used', r['Shampoo Used'])}
+    </div>
+    ${r['Style Notes'] ? `<div style="font-size:13px;margin-top:8px;"><span class="k" style="color:#777;font-size:10.5px;text-transform:uppercase;">Style Notes</span>${esc(r['Style Notes'])}</div>` : ''}
+    ${r['Additional Notes'] ? `<div style="font-size:13px;margin-top:8px;"><span class="k" style="color:#777;font-size:10.5px;text-transform:uppercase;">Additional Notes</span>${esc(r['Additional Notes'])}</div>` : ''}
+    <div class="p-charge"><span>Total Charges</span><span>RM ${r['Charges (RM)'] ? parseFloat(r['Charges (RM)']).toFixed(2) : '0.00'}</span></div>
+    <div class="p-footer">Thank you for trusting ${esc(BUSINESS_NAME)} with your dog's grooming.</div>
+  </div>`;
+  window.print();
 }
 
 /* ---- Form ---- */
@@ -471,6 +636,7 @@ function renderForm(){
       <div class="field"><label>Service Required</label>${pillGroup(SERVICE, d['Service Required'])}
         ${d['Service Required']==='Other' ? `<div class="assess-note"><input type="text" id="f_ServiceNotes" placeholder="Describe service" value="${esc(d['Service Notes'])}"></div>` : ''}
       </div>
+      <div class="field" style="max-width:220px;"><label>Charges (RM)</label><input type="number" step="0.01" id="f_Charges" value="${esc(d['Charges (RM)'])}" placeholder="0.00"></div>
       <div class="field"><label>Temperament &amp; Behavior During Grooming</label>${pillGroup(TEMPERAMENT, d['Temperament'])}
         ${d['Temperament']==='Other' ? `<div class="assess-note"><input type="text" id="f_TemperamentNotes" placeholder="Describe behavior" value="${esc(d['Temperament Notes'])}"></div>` : ''}
       </div>
@@ -507,7 +673,7 @@ function attachHandlers(){
   document.querySelectorAll('nav.tabs button').forEach(b=>{
     b.onclick = ()=>{
       if(b.dataset.tab === 'form'){ state.formData = {}; state.editingId = null; state.tab = 'form'; }
-      else { state.tab = 'list'; }
+      else { state.tab = b.dataset.tab; }
       render();
     };
   });
@@ -523,6 +689,12 @@ function attachHandlers(){
   document.querySelectorAll('.record-tag').forEach(el=>{
     el.onclick = ()=>{ state.detailId = el.dataset.id; state.tab = 'detail'; render(); };
   });
+
+  const exportBtn = document.getElementById('exportPdfBtn');
+  if(exportBtn) exportBtn.onclick = ()=>{
+    const r = state.records.find(x=>x['Record ID']===state.detailId);
+    if(r) exportRecordAsPdf(r);
+  };
 
   const editBtn = document.getElementById('editBtn');
   if(editBtn) editBtn.onclick = ()=>{
@@ -595,6 +767,7 @@ function collectFormData(){
   const map = {
     'Dog Name':'f_DogName','Owner Name':'f_OwnerName','Date of Grooming':'f_Date','Breed':'f_Breed','Weight (kg)':'f_Weight',
     'Style Notes':'f_StyleNotes','Additional Notes':'f_AdditionalNotes','Service Notes':'f_ServiceNotes',
+    'Charges (RM)':'f_Charges',
     'Temperament Notes':'f_TemperamentNotes','Shampoo Notes':'f_ShampooNotes'
   };
   PRE_ASSESSMENT.forEach(cat=>{ map[cat.key+' Notes'] = 'f_'+cat.key+'Notes'; });
@@ -605,6 +778,7 @@ function collectFormData(){
 }
 
 /* ------------------------- Init ------------------------- */
+initBranding();
 render();
 if(configured()) refreshRecords();
 </script>
