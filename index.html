@@ -1039,7 +1039,7 @@ function exportRecordAsPdf(r){
       ${row('Breed', r['Breed'])}
       ${row('Gender', r['Gender'])}
       ${row('Weight (kg)', r['Weight (kg)'])}
-
+      ${row('Service Required', r['Service Required'])}
     </div>
     <h3>Pre-Assessment</h3>
     <div class="p-grid">
@@ -1052,7 +1052,6 @@ function exportRecordAsPdf(r){
       ${row('Shampoo Used', formatMultiValue(r['Shampoo Used']))}
     </div>
     ${r['Style Notes'] ? `<div style="font-size:13px;margin-top:8px;"><span class="k" style="color:#777;font-size:10.5px;text-transform:uppercase;">Style Notes</span>${esc(r['Style Notes'])}</div>` : ''}
-    ${r['Service Required'] ? `<div style="font-size:13px;margin-top:8px;"><span class="k" style="color:#777;font-size:10.5px;text-transform:uppercase;">Style Notes</span>${esc(r['Service Required'])}</div>` : ''}
     ${r['Additional Notes'] ? `<div style="font-size:13px;margin-top:8px;"><span class="k" style="color:#777;font-size:10.5px;text-transform:uppercase;">Additional Notes</span>${esc(r['Additional Notes'])}</div>` : ''}
     
     <h3>Pricing</h3>
