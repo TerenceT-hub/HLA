@@ -577,24 +577,26 @@ async function apiDelete(id){
   return res.json();
 }
 async function uploadPhotos(recordId, files) {
-  const formData = new FormData();
-  formData.append('recordId', recordId);
-  
+  // Apps Script doesn't reliably handle multiple files sent under the same
+  // form field in one request, so upload them one at a time instead.
+  const uploadedUrls = [];
   for (let i = 0; i < files.length; i++) {
+    const formData = new FormData();
+    formData.append('recordId', recordId);
     formData.append('photo', files[i]);
+    try {
+      const response = await fetch(APPS_SCRIPT_URL, { method: 'POST', body: formData });
+      const result = await response.json();
+      if (!result.success) {
+        return { success: false, error: result.error || `Failed on photo ${i + 1} of ${files.length}` };
+      }
+      if (result.url) uploadedUrls.push(result.url);
+    } catch (err) {
+      console.error('Upload error:', err);
+      return { success: false, error: err.message || `Failed on photo ${i + 1} of ${files.length}` };
+    }
   }
-  
-  try {
-    const response = await fetch(APPS_SCRIPT_URL, {
-      method: 'POST',
-      body: formData,
-    });
-    const result = await response.json();
-    return result;
-  } catch (err) {
-    console.error('Upload error:', err);
-    throw err;
-  }
+  return { success: true, urls: uploadedUrls };
 }
 
 function showToast(msg){
