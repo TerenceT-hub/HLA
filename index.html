@@ -1174,7 +1174,7 @@ function renderForm(){
           </div>
           <div class="field" style="margin-bottom:0;">
             <label>Final Charges (SGD)</label>
-            <input type="number" step="0.01" id="f_Charges (SGD)" value="${esc(d['Charges (SGD)'])}" placeholder="0.00" readonly>
+            <input type="number" step="0.01" id="f_ChargesFinal" value="${esc(d['Charges (SGD)'])}" placeholder="0.00" readonly>
           </div>
         </div>
         <div class="field" style="margin-top:10px;">
@@ -1217,9 +1217,9 @@ function renderForm(){
 function calculatePrice(){
   const baseEl = document.getElementById('f_BasePrice');
   const discountEl = document.getElementById('f_Discount');
-  const Charges (SGD)El = document.getElementById('f_Charges (SGD)');
+  const chargesEl = document.getElementById('f_ChargesFinal');
   const summaryEl = document.getElementById('priceCalculation');
-  if(!baseEl || !discountEl || !Charges (SGD)El) return;
+  if(!baseEl || !discountEl || !chargesEl) return;
 
   const base = parseFloat(baseEl.value) || 0;
   let discount = parseFloat(discountEl.value) || 0;
@@ -1228,7 +1228,7 @@ function calculatePrice(){
 
   const discountAmount = base * discount / 100;
   const finalPrice = Math.max(0, base - discountAmount);
-  Charges (SGD)El.value = baseEl.value === '' ? '' : finalPrice.toFixed(2);
+  chargesEl.value = baseEl.value === '' ? '' : finalPrice.toFixed(2);
 
   if(summaryEl){
     if(baseEl.value === ''){
@@ -1519,7 +1519,7 @@ function collectFormData(){
     'Style Notes':'f_StyleNotes',
     'Additional Notes':'f_AdditionalNotes',
     'Service Notes':'f_ServiceNotes',
-    'Charges (SGD)':'f_Charges (SGD)',
+    'Charges (SGD)':'f_ChargesFinal',
     'Base Price (SGD)':'f_BasePrice',
     'Discount (%)':'f_Discount',
     'Discount Notes':'f_DiscountNotes',
