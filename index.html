@@ -395,7 +395,7 @@
   .photo-upload-area {
     border:2px dashed var(--line);
     border-radius:var(--radius);
-    padding:12px;
+    padding:20px;
     text-align:center;
     cursor:pointer;
     transition:all .15s;
@@ -408,6 +408,61 @@
   .photo-upload-area.dragover {
     border-color:var(--sage);
     background:var(--sage-soft);
+  }
+  .photo-upload-area.uploading {
+    opacity:0.6;
+    pointer-events:none;
+  }
+  .photo-upload-area .upload-progress {
+    display:none;
+    margin-top:8px;
+    font-size:13px;
+    color:var(--sage);
+  }
+  .photo-upload-area.uploading .upload-progress {
+    display:block;
+  }
+
+  .photo-thumbnail {
+    position:relative;
+    width:120px;
+    height:120px;
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    overflow:hidden;
+  }
+  .photo-thumbnail img {
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    cursor:pointer;
+  }
+  .photo-thumbnail .remove-btn {
+    position:absolute;
+    top:4px;
+    right:4px;
+    background:var(--clay);
+    color:#fff;
+    border:none;
+    border-radius:50%;
+    width:24px;
+    height:24px;
+    font-size:14px;
+    cursor:pointer;
+    line-height:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .photo-thumbnail .photo-number {
+    position:absolute;
+    bottom:4px;
+    right:4px;
+    background:rgba(0,0,0,0.6);
+    color:#fff;
+    font-size:10px;
+    padding:2px 6px;
+    border-radius:10px;
   }
 
   #printArea{display:none;}
@@ -521,10 +576,9 @@ async function apiDelete(id){
   const res = await fetch(APPS_SCRIPT_URL, { method:'POST', body: JSON.stringify({action:'delete', id}) });
   return res.json();
 }
-async function uploadCategoryPhoto(recordId, category, files) {
+async function uploadPhotos(recordId, files) {
   const formData = new FormData();
   formData.append('recordId', recordId);
-  formData.append('category', category);
   
   for (let i = 0; i < files.length; i++) {
     formData.append('photo', files[i]);
@@ -649,6 +703,9 @@ function renderDetail(){
       ${val ? chips : 'Not recorded'}
     </div></div>`;
   }
+  
+  const photos = (r['Photos'] || '').split(',').filter(Boolean);
+  
   let html = `<div class="card">
     <div class="detail-header">
       <div>
@@ -666,51 +723,19 @@ function renderDetail(){
       ${tagItem('Gender', 'Gender', GENDER.options)}
       ${item('Weight (kg)', r['Weight (kg)'])}
       ${tagItem('Service Required', 'Service Required', SERVICE.options)}
-      ${item('Base Price', r['Base Price'] ? r['Base Price'] : (r['Charges'] ? r['Charges'] : ''))}
+      ${item('Base Price (SGD)', r['Base Price (SGD)'] ? r['Base Price (SGD)'] : (r['Charges (SGD)'] ? r['Charges (SGD)'] : ''))}
       ${item('Discount', r['Discount (%)'] ? r['Discount (%)'] + '%' : '')}
       ${item('Discount Notes', r['Discount Notes'] || '')}
-      ${item('Final Charges', r['Charges'] ? r['Charges'] : '')}
+      ${item('Final Charges (SGD)', r['Charges (SGD)'] ? r['Charges (SGD)'] : '')}
     </div>
     <div class="section" style="padding-top:6px;">
       <div class="section-title"><span class="num">01</span><h2>Pre-Assessment</h2></div>
       <div class="detail-grid">
-        ${PRE_ASSESSMENT.map(cat => {
-          const photos = (r[cat.key+' Photos'] || '').split(',').filter(Boolean);
-          return `
-            ${tagItem(cat.label, cat.key, cat.options)}
-            ${r[cat.key+' Notes'] ? `<div class="detail-item"><label>${esc(cat.label)} Notes</label><div class="val">${esc(r[cat.key+' Notes'])}</div></div>` : ''}
-            ${photos.length > 0 ? `
-              <div class="detail-item" style="grid-column:1/-1;">
-                <label>${esc(cat.label)} Photos</label>
-                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">
-                  ${photos.map(url => `
-                    <div style="width:100px;height:100px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;cursor:pointer;" onclick="window.open('${esc(url)}', '_blank')">
-                      <img src="${esc(url)}" style="width:100%;height:100%;object-fit:cover;">
-                    </div>
-                  `).join('')}
-                </div>
-              </div>
-            ` : ''}
-          `;
-        }).join('')}
-        ${(() => {
-          const matsPhotos = (r['Mats Photos'] || '').split(',').filter(Boolean);
-          return `
-            ${tagItem('Mats', 'Mats', MATS.options)}
-            ${matsPhotos.length > 0 ? `
-              <div class="detail-item" style="grid-column:1/-1;">
-                <label>Mats Photos</label>
-                <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;">
-                  ${matsPhotos.map(url => `
-                    <div style="width:100px;height:100px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;cursor:pointer;" onclick="window.open('${esc(url)}', '_blank')">
-                      <img src="${esc(url)}" style="width:100%;height:100%;object-fit:cover;">
-                    </div>
-                  `).join('')}
-                </div>
-              </div>
-            ` : ''}
-          `;
-        })()}
+        ${PRE_ASSESSMENT.map(cat => `
+          ${tagItem(cat.label, cat.key, cat.options)}
+          ${r[cat.key+' Notes'] ? `<div class="detail-item"><label>${esc(cat.label)} Notes</label><div class="val">${esc(r[cat.key+' Notes'])}</div></div>` : ''}
+        `).join('')}
+        ${tagItem('Mats', 'Mats', MATS.options)}
       </div>
     </div>
     <div class="section">
@@ -734,10 +759,38 @@ function renderDetail(){
               <div class="dog">${esc(h['Service Required']||'Visit')}</div>
               <div class="meta">${esc(h['Temperament']||'—')}${h['Style Notes'] ? ' · '+esc(h['Style Notes']) : ''}</div>
             </div>
-            <div class="date">${esc(h['Date of Grooming']||'')}${h['Charges'] ? +esc(h['Charges']) : ''}</div>
+            <div class="date">${esc(h['Date of Grooming']||'')}${h['Charges (SGD)'] ? +esc(h['Charges (SGD)']) : ''}</div>
           </div>`).join('')}
       </div>`;
     })()}
+    <div class="section">
+      <div class="section-title"><span class="num">04</span><h2>Photos</h2></div>
+      <div style="background:var(--sage-soft);border:1px solid var(--sage);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;">
+        <div style="font-size:13px;color:var(--sage);">
+          💡 <strong>Note:</strong> Please save the record first before uploading photos. Maximum 5 photos.
+        </div>
+      </div>
+      
+      <div class="photo-upload-area" id="photoUploadArea">
+        <div style="font-size:32px;">📷</div>
+        <div style="font-size:13px;color:var(--ink-soft);margin:8px 0;">Click or drag photos here</div>
+        <div style="font-size:11px;color:var(--ink-soft);">Maximum 5 photos (JPG, PNG, GIF)</div>
+        <div class="upload-progress">Uploading...</div>
+        <input type="file" id="photoInput" multiple accept="image/*" style="display:none;">
+      </div>
+      
+      <div id="photoGallery" style="display:${photos.length > 0 ? 'flex' : 'none'};flex-wrap:wrap;gap:12px;margin-top:12px;">
+        ${photos.map((url, index) => `
+          <div class="photo-thumbnail">
+            <img src="${esc(url)}" onclick="window.open('${esc(url)}', '_blank')">
+            <button type="button" class="remove-btn" data-url="${esc(url)}">×</button>
+            <div class="photo-number">${index + 1}/5</div>
+          </div>
+        `).join('')}
+      </div>
+      ${photos.length === 0 ? `<div style="text-align:center;color:var(--ink-soft);font-size:13px;padding:20px 0;">No photos uploaded yet</div>` : ''}
+      <div style="font-size:11px;color:var(--ink-soft);margin-top:8px;">${photos.length}/5 photos used</div>
+    </div>
   </div>`;
   return html;
 }
@@ -774,8 +827,8 @@ function renderRevenue(){
   let grandTotal = 0, grandCount = 0, grandDiscount = 0, grandDiscountCount = 0;
   
   state.records.forEach(r=>{
-    const charge = parseFloat(r['Charges']) || 0;
-    const basePrice = parseFloat(r['Base Price']) || 0;
+    const charge = parseFloat(r['Charges (SGD)']) || 0;
+    const basePrice = parseFloat(r['Base Price (SGD)']) || 0;
     const discount = parseFloat(r['Discount (%)']) || 0;
     const discountAmount = basePrice * (discount / 100);
     const hasDiscount = discount > 0;
@@ -920,7 +973,7 @@ function renderRevenue(){
   if(months.length === 0){
     html += `<div class="card empty-state"><div class="stamp">犬</div>
       <div style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:6px;">No revenue yet</div>
-      <div>Charges you record against each groom will roll up here by month.</div>
+      <div>Charges (SGD) you record against each groom will roll up here by month.</div>
     </div>`;
     return html;
   }
@@ -965,11 +1018,11 @@ function exportRecordAsPdf(r){
   }
   const printArea = document.getElementById('printArea');
   
-  let basePrice = parseFloat(r['Base Price']) || 0;
+  let basePrice = parseFloat(r['Base Price (SGD)']) || 0;
   let discount = parseFloat(r['Discount (%)']) || 0;
-  let finalCharge = parseFloat(r['Charges']) || 0;
+  let finalCharge = parseFloat(r['Charges (SGD)']) || 0;
   
-  if (!r['Charges'] && basePrice > 0) {
+  if (!r['Charges (SGD)'] && basePrice > 0) {
     finalCharge = basePrice * (1 - discount / 100);
   }
   
@@ -986,7 +1039,7 @@ function exportRecordAsPdf(r){
       ${row('Breed', r['Breed'])}
       ${row('Gender', r['Gender'])}
       ${row('Weight (kg)', r['Weight (kg)'])}
-      ${row('Service Required', r['Service Required'])}
+
     </div>
     <h3>Pre-Assessment</h3>
     <div class="p-grid">
@@ -999,15 +1052,16 @@ function exportRecordAsPdf(r){
       ${row('Shampoo Used', formatMultiValue(r['Shampoo Used']))}
     </div>
     ${r['Style Notes'] ? `<div style="font-size:13px;margin-top:8px;"><span class="k" style="color:#777;font-size:10.5px;text-transform:uppercase;">Style Notes</span>${esc(r['Style Notes'])}</div>` : ''}
+    ${r['Service Required'] ? `<div style="font-size:13px;margin-top:8px;"><span class="k" style="color:#777;font-size:10.5px;text-transform:uppercase;">Style Notes</span>${esc(r['Service Required'])}</div>` : ''}
     ${r['Additional Notes'] ? `<div style="font-size:13px;margin-top:8px;"><span class="k" style="color:#777;font-size:10.5px;text-transform:uppercase;">Additional Notes</span>${esc(r['Additional Notes'])}</div>` : ''}
     
     <h3>Pricing</h3>
     <div class="p-grid" style="margin-bottom:12px;">
-      ${row('Base Price', r['Base Price'] ? parseFloat(r['Base Price']).toFixed(2) : '—')}
+      ${row('Base Price (SGD)', r['Base Price (SGD)'] ? parseFloat(r['Base Price (SGD)']).toFixed(2) : '—')}
       ${row('Discount', r['Discount (%)'] ? r['Discount (%)'] + '%' : '—')}
       ${row('Discount Notes', r['Discount Notes'] || '—')}
     </div>
-    <div class="p-charge"><span>Total Charges</span><span>${finalCharge.toFixed(2)}</span></div>
+    <div class="p-charge"><span>Total Charges (SGD)</span><span>${finalCharge.toFixed(2)}</span></div>
     <div class="p-footer">${esc(BUSINESS_NAME)} | More than a haircut - A calm and comfortable grooming experience.</div>
   </div>`;
   window.print();
@@ -1036,7 +1090,7 @@ function renderVisitHistoryBox(dogName, ownerName){
       <label style="color:var(--sage);margin-bottom:8px;">Previous Visits — ${esc(dogName)}</label>
       ${history.slice(0,5).map(h=>`<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.06);">
         <span>${esc(h['Date of Grooming']||'—')} · ${esc(h['Service Required']||'—')}</span>
-        <span style="color:var(--ink-soft);">${h['Charges'] ? ' '+esc(h['Charges']) : ''}</span>
+        <span style="color:var(--ink-soft);">${h['Charges (SGD)'] ? ' '+esc(h['Charges (SGD)']) : ''}</span>
       </div>`).join('')}
       <div style="font-size:11.5px;color:var(--ink-soft);margin-top:8px;">Breed and gender were filled in from their last visit — adjust anything that's changed.</div>
     </div>
@@ -1089,48 +1143,12 @@ function renderForm(){
     <div class="section">
       <div class="section-title"><span class="num">02</span><h2>Pre-Assessment</h2></div>
       ${PRE_ASSESSMENT.map(cat=>`
-        <div class="field" style="border-bottom:1px solid var(--line-soft);padding-bottom:18px;margin-bottom:18px;">
-          <label style="font-weight:500;font-size:14px;color:var(--ink);margin-bottom:10px;">${esc(cat.label)}</label>
+        <div class="field">
+          <label>${esc(cat.label)}</label>
           ${pillGroup(cat, d[cat.key])}
           <div class="assess-note"><input type="text" id="f_${esc(cat.key)}Notes" placeholder="Notes (optional)" value="${esc(d[cat.key+' Notes'])}"></div>
-          
-          <div style="margin-top:10px;">
-            <label style="font-size:11px;color:var(--ink-soft);margin-bottom:5px;">Photos</label>
-            <div class="photo-upload-area" data-category="${esc(cat.key)}">
-              <div style="font-size:20px;">📷</div>
-              <div style="font-size:11px;color:var(--ink-soft);">Click to upload photos for ${esc(cat.label)}</div>
-              <input type="file" class="category-photo-input" data-category="${esc(cat.key)}" multiple accept="image/*" style="display:none;">
-            </div>
-            <div class="photo-preview" data-category="${esc(cat.key)}" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
-              ${(d[cat.key+' Photos'] || '').split(',').filter(Boolean).map(url => `
-                <div style="position:relative;width:80px;height:80px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;">
-                  <img src="${esc(url)}" style="width:100%;height:100%;object-fit:cover;">
-                  <button type="button" class="remove-category-photo" data-category="${esc(cat.key)}" data-url="${esc(url)}" style="position:absolute;top:2px;right:2px;background:var(--clay);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;line-height:1;">×</button>
-                </div>
-              `).join('')}
-            </div>
-          </div>
         </div>`).join('')}
-      <div class="field" style="border-bottom:1px solid var(--line-soft);padding-bottom:18px;margin-bottom:18px;">
-        <label style="font-weight:500;font-size:14px;color:var(--ink);margin-bottom:10px;">Mats</label>
-        ${pillGroup(MATS, d['Mats'])}
-        <div style="margin-top:10px;">
-          <label style="font-size:11px;color:var(--ink-soft);margin-bottom:5px;">Photos</label>
-          <div class="photo-upload-area" data-category="Mats">
-            <div style="font-size:20px;">📷</div>
-            <div style="font-size:11px;color:var(--ink-soft);">Click to upload photos for Mats</div>
-            <input type="file" class="category-photo-input" data-category="Mats" multiple accept="image/*" style="display:none;">
-          </div>
-          <div class="photo-preview" data-category="Mats" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;">
-            ${(d['Mats Photos'] || '').split(',').filter(Boolean).map(url => `
-              <div style="position:relative;width:80px;height:80px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;">
-                <img src="${esc(url)}" style="width:100%;height:100%;object-fit:cover;">
-                <button type="button" class="remove-category-photo" data-category="Mats" data-url="${esc(url)}" style="position:absolute;top:2px;right:2px;background:var(--clay);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer;line-height:1;">×</button>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      </div>
+      <div class="field"><label>Mats</label>${pillGroup(MATS, d['Mats'])}</div>
     </div>
 
     <div class="section">
@@ -1142,8 +1160,8 @@ function renderForm(){
         <label>Pricing</label>
         <div class="row3">
           <div class="field" style="margin-bottom:0;">
-            <label>Base Price</label>
-            <input type="number" min="0" step="0.01" id="f_BasePrice" value="${esc(d['Base Price'] || d['Charges'] || '')}" placeholder="e.g. 80.00">
+            <label>Base Price (SGD)</label>
+            <input type="number" min="0" step="0.01" id="f_BasePrice" value="${esc(d['Base Price (SGD)'] || d['Charges (SGD)'] || '')}" placeholder="e.g. 80.00">
           </div>
           <div class="field" style="margin-bottom:0;">
             <label>Discount (%)</label>
@@ -1156,8 +1174,8 @@ function renderForm(){
             </div>
           </div>
           <div class="field" style="margin-bottom:0;">
-            <label>Final Charges</label>
-            <input type="number" step="0.01" id="f_Charges" value="${esc(d['Charges'])}" placeholder="0.00" readonly>
+            <label>Final Charges (SGD)</label>
+            <input type="number" step="0.01" id="f_Charges (SGD)" value="${esc(d['Charges (SGD)'])}" placeholder="0.00" readonly>
           </div>
         </div>
         <div class="field" style="margin-top:10px;">
@@ -1200,9 +1218,9 @@ function renderForm(){
 function calculatePrice(){
   const baseEl = document.getElementById('f_BasePrice');
   const discountEl = document.getElementById('f_Discount');
-  const chargesEl = document.getElementById('f_Charges');
+  const Charges (SGD)El = document.getElementById('f_Charges (SGD)');
   const summaryEl = document.getElementById('priceCalculation');
-  if(!baseEl || !discountEl || !chargesEl) return;
+  if(!baseEl || !discountEl || !Charges (SGD)El) return;
 
   const base = parseFloat(baseEl.value) || 0;
   let discount = parseFloat(discountEl.value) || 0;
@@ -1211,11 +1229,11 @@ function calculatePrice(){
 
   const discountAmount = base * discount / 100;
   const finalPrice = Math.max(0, base - discountAmount);
-  chargesEl.value = baseEl.value === '' ? '' : finalPrice.toFixed(2);
+  Charges (SGD)El.value = baseEl.value === '' ? '' : finalPrice.toFixed(2);
 
   if(summaryEl){
     if(baseEl.value === ''){
-      summaryEl.textContent = 'Enter the base price to calculate the final charge.';
+      summaryEl.textContent = 'Enter the Base Price (SGD) to calculate the final charge.';
     }else if(discount > 0){
       summaryEl.innerHTML = `${base.toFixed(2)} − ${discount.toFixed(2)}% discount (${discountAmount.toFixed(2)}) = <strong>${finalPrice.toFixed(2)}</strong>`;
     }else{
@@ -1242,88 +1260,116 @@ function setupPricingHandlers(){
   calculatePrice();
 }
 
-function setupCategoryPhotoUpload() {
-  // Photo upload areas
-  document.querySelectorAll('.photo-upload-area').forEach(area => {
-    const category = area.dataset.category;
-    const fileInput = area.querySelector('.category-photo-input');
-    
-    if (!fileInput) return;
-    
-    area.onclick = () => fileInput.click();
-    
-    fileInput.onchange = async () => {
-      if (fileInput.files.length === 0) return;
-      
-      const files = Array.from(fileInput.files);
-      showToast(`Uploading ${files.length} photo${files.length > 1 ? 's' : ''}...`);
-      
-      try {
-        const recordId = state.editingId || state.detailId;
-        if (!recordId) {
-          showToast('Please save the record first, then upload photos');
-          return;
-        }
-        
-        const result = await uploadCategoryPhoto(recordId, category, files);
-        if (result.success) {
-          showToast('Photos uploaded successfully!');
-          const currentPhotos = state.formData[category + ' Photos'] || '';
-          const photoUrls = result.urls || [];
-          const updatedPhotos = currentPhotos ? `${currentPhotos},${photoUrls.join(',')}` : photoUrls.join(',');
-          state.formData[category + ' Photos'] = updatedPhotos;
-          render();
-        } else {
-          showToast('Upload failed: ' + result.error);
-        }
-      } catch (err) {
-        showToast('Upload failed. Please try again.');
-        console.error(err);
-      }
-      
-      fileInput.value = '';
-    };
-    
-    area.ondragover = (e) => {
-      e.preventDefault();
-      area.style.borderColor = 'var(--sage)';
-      area.style.background = 'var(--sage-soft)';
-    };
-    
-    area.ondragleave = () => {
-      area.style.borderColor = 'var(--line)';
-      area.style.background = '#fafaf8';
-    };
-    
-    area.ondrop = (e) => {
-      e.preventDefault();
-      area.style.borderColor = 'var(--line)';
-      area.style.background = '#fafaf8';
-      
-      if (e.dataTransfer.files.length > 0) {
-        fileInput.files = e.dataTransfer.files;
-        fileInput.onchange();
-      }
-    };
-  });
+function setupPhotoUpload() {
+  const uploadArea = document.getElementById('photoUploadArea');
+  const fileInput = document.getElementById('photoInput');
+  const galleryEl = document.getElementById('photoGallery');
   
-  // Remove photo buttons
-  document.querySelectorAll('.remove-category-photo').forEach(btn => {
+  if (!uploadArea || !fileInput) return;
+  
+  // Click to upload
+  uploadArea.onclick = () => {
+    if (!state.detailId) {
+      showToast('Please save the record first before uploading photos');
+      return;
+    }
+    
+    const r = state.records.find(x => x['Record ID'] === state.detailId);
+    const currentPhotos = (r && r['Photos']) ? r['Photos'].split(',').filter(Boolean) : [];
+    if (currentPhotos.length >= 5) {
+      showToast('Maximum 5 photos allowed');
+      return;
+    }
+    
+    fileInput.click();
+  };
+  
+  // File selection
+  fileInput.onchange = async () => {
+    if (fileInput.files.length === 0) return;
+    
+    if (!state.detailId) {
+      showToast('Please save the record first');
+      fileInput.value = '';
+      return;
+    }
+    
+    const r = state.records.find(x => x['Record ID'] === state.detailId);
+    const currentPhotos = (r && r['Photos']) ? r['Photos'].split(',').filter(Boolean) : [];
+    const remainingSlots = 5 - currentPhotos.length;
+    
+    if (fileInput.files.length > remainingSlots) {
+      showToast(`You can only upload ${remainingSlots} more photo${remainingSlots > 1 ? 's' : ''}`);
+      fileInput.value = '';
+      return;
+    }
+    
+    const files = Array.from(fileInput.files);
+    
+    uploadArea.classList.add('uploading');
+    showToast(`Uploading ${files.length} photo${files.length > 1 ? 's' : ''}...`);
+    
+    try {
+      const result = await uploadPhotos(state.detailId, files);
+      if (result.success) {
+        showToast('Photos uploaded successfully!');
+        await refreshRecords();
+        render();
+      } else {
+        showToast('Upload failed: ' + result.error);
+      }
+    } catch (err) {
+      showToast('Upload failed. Please try again.');
+      console.error(err);
+    }
+    
+    uploadArea.classList.remove('uploading');
+    fileInput.value = '';
+  };
+  
+  // Drag and drop
+  uploadArea.ondragover = (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('dragover');
+  };
+  
+  uploadArea.ondragleave = () => {
+    uploadArea.classList.remove('dragover');
+  };
+  
+  uploadArea.ondrop = async (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    
+    if (e.dataTransfer.files.length > 0) {
+      if (!state.detailId) {
+        showToast('Please save the record first before uploading photos');
+        return;
+      }
+      fileInput.files = e.dataTransfer.files;
+      fileInput.onchange();
+    }
+  };
+  
+  // Remove photo
+  document.querySelectorAll('.remove-btn').forEach(btn => {
     btn.onclick = async (e) => {
       e.stopPropagation();
-      const category = btn.dataset.category;
       const url = btn.dataset.url;
       if (!confirm('Remove this photo?')) return;
       
-      const recordId = state.editingId || state.detailId;
-      if (!recordId) return;
+      if (!state.detailId) {
+        showToast('Please save the record first');
+        return;
+      }
       
-      const currentPhotos = (state.formData[category + ' Photos'] || '').split(',').filter(Boolean);
+      const r = state.records.find(x => x['Record ID'] === state.detailId);
+      const currentPhotos = (r && r['Photos']) ? r['Photos'].split(',').filter(Boolean) : [];
       const updatedPhotos = currentPhotos.filter(u => u !== url);
-      state.formData[category + ' Photos'] = updatedPhotos.join(',');
       
-      await apiUpdate(recordId, { [category + ' Photos']: state.formData[category + ' Photos'] });
+      await apiUpdate(state.detailId, { 'Photos': updatedPhotos.join(',') });
       showToast('Photo removed');
+      await refreshRecords();
       render();
     };
   });
@@ -1405,7 +1451,7 @@ function attachHandlers(){
   });
 
   setupPricingHandlers();
-  setupCategoryPhotoUpload();
+  setupPhotoUpload();
 
   const cancelBtn = document.getElementById('cancelFormBtn');
   if(cancelBtn) cancelBtn.onclick = ()=>{ state.tab = state.editingId ? 'detail' : 'list'; render(); };
@@ -1430,23 +1476,35 @@ function attachHandlers(){
   if(saveBtn) saveBtn.onclick = async ()=>{
     collectFormData();
     
-    if(!state.formData['Dog Name']){ showToast('Please enter a dog name'); return; }
-    saveBtn.textContent = 'Saving…'; saveBtn.disabled = true;
+    if(!state.formData['Dog Name']){ 
+      showToast('Please enter a dog name'); 
+      return; 
+    }
+    
+    saveBtn.textContent = 'Saving…'; 
+    saveBtn.disabled = true;
+    
     try{
+      let result;
       if(state.editingId){
         await apiUpdate(state.editingId, state.formData);
         showToast('Record updated');
+        state.detailId = state.editingId;
       }else{
-        const result = await apiCreate(state.formData);
+        result = await apiCreate(state.formData);
         state.editingId = result.id;
-        showToast('Record saved');
+        state.detailId = result.id;
+        showToast('Record created! You can now upload photos.');
       }
-      state.tab = 'list';
+      
       await refreshRecords();
+      state.tab = 'detail';
+      render();
     }catch(err){
       showToast('Could not save — check connection');
       console.error(err);
-      saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record'; saveBtn.disabled = false;
+      saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record'; 
+      saveBtn.disabled = false;
     }
   };
 }
@@ -1462,8 +1520,8 @@ function collectFormData(){
     'Style Notes':'f_StyleNotes',
     'Additional Notes':'f_AdditionalNotes',
     'Service Notes':'f_ServiceNotes',
-    'Charges':'f_Charges',
-    'Base Price':'f_BasePrice',
+    'Charges (SGD)':'f_Charges (SGD)',
+    'Base Price (SGD)':'f_BasePrice',
     'Discount (%)':'f_Discount',
     'Discount Notes':'f_DiscountNotes',
     'Temperament Notes':'f_TemperamentNotes',
@@ -1471,7 +1529,6 @@ function collectFormData(){
   };
   PRE_ASSESSMENT.forEach(cat=>{ 
     map[cat.key+' Notes'] = 'f_'+cat.key+'Notes';
-    // Photos are handled separately
   });
   Object.entries(map).forEach(([k,id])=>{
     const el = document.getElementById(id);
