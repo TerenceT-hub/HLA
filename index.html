@@ -1018,11 +1018,11 @@ function exportRecordAsPdf(r){
   }
   const printArea = document.getElementById('printArea');
   
-  let basePrice = parseFloat(r['Base Price (SGD)']) || 0;
+  let basePrice = parseFloat(r['Base Price']) || 0;
   let discount = parseFloat(r['Discount (%)']) || 0;
-  let finalCharge = parseFloat(r['Charges (SGD)']) || 0;
+  let finalCharge = parseFloat(r['Charges']) || 0;
   
-  if (!r['Charges (SGD)'] && basePrice > 0) {
+  if (!r['Charges'] && basePrice > 0) {
     finalCharge = basePrice * (1 - discount / 100);
   }
   
@@ -1039,28 +1039,28 @@ function exportRecordAsPdf(r){
       ${row('Breed', r['Breed'])}
       ${row('Gender', r['Gender'])}
       ${row('Weight (kg)', r['Weight (kg)'])}
+    </div>
+    <h3>Service Notes</h3>
+    <div class="p-grid">
       ${row('Service Required', r['Service Required'])}
+      ${row('Temperament', formatMultiValue(r['Temperament']))}
+      ${row('Shampoo Used', formatMultiValue(r['Shampoo Used']))}
     </div>
     <h3>Pre-Assessment</h3>
     <div class="p-grid">
       ${PRE_ASSESSMENT.map(cat=>row(cat.label, tagVal(cat.key) + (r[cat.key+' Notes'] ? ' — '+r[cat.key+' Notes'] : ''))).join('')}
       ${row('Mats', r['Mats'])}
     </div>
-    <h3>Service Notes</h3>
-    <div class="p-grid">
-      ${row('Temperament', formatMultiValue(r['Temperament']))}
-      ${row('Shampoo Used', formatMultiValue(r['Shampoo Used']))}
-    </div>
     ${r['Style Notes'] ? `<div style="font-size:13px;margin-top:8px;"><span class="k" style="color:#777;font-size:10.5px;text-transform:uppercase;">Style Notes</span>${esc(r['Style Notes'])}</div>` : ''}
     ${r['Additional Notes'] ? `<div style="font-size:13px;margin-top:8px;"><span class="k" style="color:#777;font-size:10.5px;text-transform:uppercase;">Additional Notes</span>${esc(r['Additional Notes'])}</div>` : ''}
     
     <h3>Pricing</h3>
     <div class="p-grid" style="margin-bottom:12px;">
-      ${row('Base Price (SGD)', r['Base Price (SGD)'] ? parseFloat(r['Base Price (SGD)']).toFixed(2) : '—')}
+      ${row('Base Price', r['Base Price'] ? parseFloat(r['Base Price']).toFixed(2) : '—')}
       ${row('Discount', r['Discount (%)'] ? r['Discount (%)'] + '%' : '—')}
       ${row('Discount Notes', r['Discount Notes'] || '—')}
     </div>
-    <div class="p-charge"><span>Total Charges (SGD)</span><span>${finalCharge.toFixed(2)}</span></div>
+    <div class="p-charge"><span>Total Charges</span><span>${finalCharge.toFixed(2)}</span></div>
     <div class="p-footer">${esc(BUSINESS_NAME)} | More than a haircut - A calm and comfortable grooming experience.</div>
   </div>`;
   window.print();
