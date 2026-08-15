@@ -509,7 +509,7 @@
 
 <script>
 /* ======================= CONFIGURATION ======================= */
-const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzk-BoIlqYQ3yhhuaW6TnZG71aggGT6cs6qBX7Cketzx9jqvlvS1vMw9L59OTgOSWPSig/exec";
+const APPS_SCRIPT_URL = "YOUR_WEB_APP_URL_HERE";
 
 const BUSINESS_NAME = "Mollie Pet";
 const LOGO_URL = "logo.png";
@@ -761,6 +761,9 @@ function renderDetail(){
       ${item('Discount', r['Discount (%)'] ? r['Discount (%)'] + '%' : '')}
       ${item('Discount Notes', r['Discount Notes'] || '')}
       ${item('Final Charges (SGD)', r['Charges (SGD)'] ? r['Charges (SGD)'] : '')}
+      ${item('Has Package', r['Has Package'] || 'No')}
+      ${item('Package Type', r['Package Type'] || '')}
+      ${item('Package Balance (SGD)', r['Package Balance'] ? r['Package Balance'] : '')}
     </div>
     <div class="section" style="padding-top:6px;">
       <div class="section-title"><span class="num">01</span><h2>Pre-Assessment</h2></div>
@@ -1052,13 +1055,15 @@ function exportRecordAsPdf(r){
   }
   const printArea = document.getElementById('printArea');
   
-  let basePrice = parseFloat(r['Base Price']) || 0;
+  let basePrice = parseFloat(r['Base Price (SGD)']) || 0;
   let discount = parseFloat(r['Discount (%)']) || 0;
-  let finalCharge = parseFloat(r['Charges']) || 0;
+  let finalCharge = parseFloat(r['Charges (SGD)']) || 0;
   
-  if (!r['Charges'] && basePrice > 0) {
+  if (!r['Charges (SGD)'] && basePrice > 0) {
     finalCharge = basePrice * (1 - discount / 100);
   }
+  
+  const photos = (r['Photos'] || '').split(',').filter(Boolean);
   
   printArea.innerHTML = `<div class="print-doc">
     <div class="p-head">
@@ -1088,13 +1093,28 @@ function exportRecordAsPdf(r){
     ${r['Style Notes'] ? `<div style="font-size:13px;margin-top:8px;"><span class="k" style="color:#777;font-size:10.5px;text-transform:uppercase;">Style Notes</span>${esc(r['Style Notes'])}</div>` : ''}
     ${r['Additional Notes'] ? `<div style="font-size:13px;margin-top:8px;"><span class="k" style="color:#777;font-size:10.5px;text-transform:uppercase;">Additional Notes</span>${esc(r['Additional Notes'])}</div>` : ''}
     
-    <h3>Pricing</h3>
+    <h3>Pricing &amp; Package</h3>
     <div class="p-grid" style="margin-bottom:12px;">
-      ${row('Base Price', r['Base Price'] ? parseFloat(r['Base Price']).toFixed(2) : '—')}
+      ${row('Base Price (SGD)', r['Base Price (SGD)'] ? parseFloat(r['Base Price (SGD)']).toFixed(2) : '—')}
       ${row('Discount', r['Discount (%)'] ? r['Discount (%)'] + '%' : '—')}
       ${row('Discount Notes', r['Discount Notes'] || '—')}
+      ${row('Has Package', r['Has Package'] || 'No')}
+      ${row('Package Type', r['Package Type'] || '—')}
+      ${row('Package Balance (SGD)', r['Package Balance'] ? parseFloat(r['Package Balance']).toFixed(2) : '—')}
     </div>
-    <div class="p-charge"><span>Total Charges</span><span>${finalCharge.toFixed(2)}</span></div>
+    <div class="p-charge"><span>Total Charges (SGD)</span><span>${finalCharge.toFixed(2)}</span></div>
+    
+    ${photos.length > 0 ? `
+      <h3>Photos</h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:10px;margin-top:10px;">
+        ${photos.map(url => `
+          <div style="border:1px solid #ddd;border-radius:4px;overflow:hidden;">
+            <img src="${esc(url)}" style="width:100%;height:150px;object-fit:cover;">
+          </div>
+        `).join('')}
+      </div>
+    ` : ''}
+    
     <div class="p-footer">${esc(BUSINESS_NAME)} | More than a haircut - A calm and comfortable grooming experience.</div>
   </div>`;
   window.print();
@@ -1165,6 +1185,30 @@ function renderForm(){
       <datalist id="dogDatalist">${uniqueDogNames().map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
       <datalist id="ownerDatalist">${uniqueOwnerNames().map(n=>`<option value="${esc(n)}">`).join('')}</datalist>
       ${renderVisitHistoryBox(d['Dog Name'], d['Owner Name'])}
+      
+      <!-- PACKAGE SECTION -->
+      <div class="field" style="border-top:1px solid var(--line-soft);padding-top:16px;margin-top:16px;">
+        <label style="font-weight:500;font-size:13px;color:var(--ink);">Package / Credit</label>
+        <div class="row">
+          <div class="field" style="margin-bottom:0;">
+            <label>Has Package?</label>
+            <div class="pill-group" id="packageToggle">
+              <button type="button" class="pill package-toggle ${d['Has Package'] === 'Yes' ? 'selected ok' : ''}" data-package="Yes">Yes</button>
+              <button type="button" class="pill package-toggle ${d['Has Package'] === 'No' || !d['Has Package'] ? 'selected neutral' : ''}" data-package="No">No</button>
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Package Type</label>
+            <input type="text" id="f_PackageType" value="${esc(d['Package Type'] || '')}" placeholder="e.g. 5 Grooming Package">
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:0;margin-top:10px;">
+          <label>Package Balance (SGD)</label>
+          <input type="number" step="0.01" id="f_PackageBalance" value="${esc(d['Package Balance'] || '')}" placeholder="e.g. 400.00">
+          <div style="font-size:11px;color:var(--ink-soft);margin-top:4px;">💡 This balance is shared across all pets belonging to the same owner.</div>
+        </div>
+      </div>
+      
       <div class="row3">
         <div class="field"><label>Date of Grooming</label><input type="date" id="f_Date" value="${esc(d['Date of Grooming']||todayStr())}"></div>
         <div class="field"><label>Breed</label><input type="text" id="f_Breed" value="${esc(d['Breed'])}" placeholder="e.g. Poodle"></div>
@@ -1296,11 +1340,9 @@ function setupPricingHandlers(){
 function setupPhotoUpload() {
   const uploadArea = document.getElementById('photoUploadArea');
   const fileInput = document.getElementById('photoInput');
-  const galleryEl = document.getElementById('photoGallery');
   
   if (!uploadArea || !fileInput) return;
   
-  // Click to upload
   uploadArea.onclick = () => {
     if (!state.detailId) {
       showToast('Please save the record first before uploading photos');
@@ -1317,7 +1359,6 @@ function setupPhotoUpload() {
     fileInput.click();
   };
   
-  // File selection
   fileInput.onchange = async () => {
     if (fileInput.files.length === 0) return;
     
@@ -1360,7 +1401,6 @@ function setupPhotoUpload() {
     fileInput.value = '';
   };
   
-  // Drag and drop
   uploadArea.ondragover = (e) => {
     e.preventDefault();
     uploadArea.classList.add('dragover');
@@ -1384,7 +1424,6 @@ function setupPhotoUpload() {
     }
   };
   
-  // Remove photo
   document.querySelectorAll('.remove-btn').forEach(btn => {
     btn.onclick = async (e) => {
       e.stopPropagation();
@@ -1420,9 +1459,31 @@ function attachHandlers(){
   const newBtn = document.getElementById('newRecordBtn');
   if(newBtn) newBtn.onclick = ()=>{ state.formData = {}; state.editingId = null; state.tab = 'form'; render(); };
 
+  // Search handler - fixed to allow multiple characters
   const searchInput = document.getElementById('searchInput');
   if(searchInput){
-    searchInput.oninput = (e)=>{ state.search = e.target.value; render(); };
+    searchInput.oninput = (e)=>{ 
+      state.search = e.target.value; 
+      // Re-render only the list, not the whole page
+      const app = document.getElementById('app');
+      if(state.tab === 'list') {
+        app.innerHTML = renderList();
+        // Re-bind click events for record tags
+        document.querySelectorAll('.record-tag').forEach(el=>{
+          el.onclick = ()=>{ state.detailId = el.dataset.id; state.tab = 'detail'; render(); };
+        });
+        // Re-bind search input
+        const newSearch = document.getElementById('searchInput');
+        if(newSearch) {
+          newSearch.oninput = searchInput.oninput;
+          newSearch.focus();
+          newSearch.selectionStart = newSearch.selectionEnd = newSearch.value.length;
+        }
+        // Re-bind new record button
+        const newBtnRebind = document.getElementById('newRecordBtn');
+        if(newBtnRebind) newBtnRebind.onclick = ()=>{ state.formData = {}; state.editingId = null; state.tab = 'form'; render(); };
+      }
+    };
   }
 
   document.querySelectorAll('.record-tag').forEach(el=>{
@@ -1470,6 +1531,16 @@ function attachHandlers(){
         render();
       };
     });
+  });
+
+  // Package toggle
+  document.querySelectorAll('.package-toggle').forEach(btn=>{
+    btn.onclick = ()=>{
+      collectFormData();
+      const value = btn.dataset.package;
+      state.formData['Has Package'] = value;
+      render();
+    };
   });
 
   document.querySelectorAll('.shampoo-option').forEach(opt=>{
@@ -1558,7 +1629,9 @@ function collectFormData(){
     'Discount (%)':'f_Discount',
     'Discount Notes':'f_DiscountNotes',
     'Temperament Notes':'f_TemperamentNotes',
-    'Shampoo Notes':'f_ShampooNotes'
+    'Shampoo Notes':'f_ShampooNotes',
+    'Package Type':'f_PackageType',
+    'Package Balance':'f_PackageBalance'
   };
   PRE_ASSESSMENT.forEach(cat=>{ 
     map[cat.key+' Notes'] = 'f_'+cat.key+'Notes';
