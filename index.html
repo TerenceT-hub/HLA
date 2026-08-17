@@ -1049,23 +1049,23 @@ function renderRevenue(){
 
 function exportRecordAsPdf(r){
   function row(label, val){
-    return `<div><span class="k">${esc(label)}</span>${val ? esc(val) : '—'}</div>`;
+    return '<div><span class="k">' + esc(label) + '</span>' + (val ? esc(val) : '—') + '</div>';
   }
   function tagVal(key, options){
-    const val = r[key];
+    var val = r[key];
     return val || '—';
   }
-  const printArea = document.getElementById('printArea');
+  var printArea = document.getElementById('printArea');
   
-  let basePrice = parseFloat(r['Base Price (SGD)']) || 0;
-  let discount = parseFloat(r['Discount (%)']) || 0;
-  let finalCharge = parseFloat(r['Charges (SGD)']) || 0;
+  var basePrice = parseFloat(r['Base Price (SGD)']) || 0;
+  var discount = parseFloat(r['Discount (%)']) || 0;
+  var finalCharge = parseFloat(r['Charges (SGD)']) || 0;
   
   if (!r['Charges (SGD)'] && basePrice > 0) {
     finalCharge = basePrice * (1 - discount / 100);
   }
   
-  let photos = [];
+  var photos = [];
   if (r['Photos']) {
     if (typeof r['Photos'] === 'string') {
       photos = r['Photos'].split(',').filter(Boolean);
@@ -1074,63 +1074,64 @@ function exportRecordAsPdf(r){
     }
   }
   
-  printArea.innerHTML = `<div class="print-doc">
-    <div class="p-head">
-      ${LOGO_URL ? `<img src="${esc(LOGO_URL)}" alt="logo">` : ''}
-      <div class="biz">${esc(BUSINESS_NAME)}</div>
-      <div class="doc-title">Grooming Record<br>${esc(r['Date of Grooming']||'')}</div>
-    </div>
-    <h3>Dog &amp; Owner</h3>
-    <div class="p-grid">
-      ${row('Dog Name', r['Dog Name'])}
-      ${row('Owner Name', r['Owner Name'])}
-      ${row('Breed', r['Breed'])}
-      ${row('Gender', r['Gender'])}
-      ${row('Weight (kg)', r['Weight (kg)'])}
-    </div>
-    <h3>Service Notes</h3>
-    <div class="p-grid">
-      ${row('Service Required', r['Service Required'])}
-      ${row('Temperament', formatMultiValue(r['Temperament']))}
-      ${row('Shampoo Used', formatMultiValue(r['Shampoo Used']))}
-    </div>
-    <h3>Pre-Assessment</h3>
-    <div class="p-grid">
-      ${PRE_ASSESSMENT.map(cat=>row(cat.label, tagVal(cat.key) + (r[cat.key+' Notes'] ? ' — '+r[cat.key+' Notes'] : ''))).join('')}
-      ${row('Mats', r['Mats'])}
-    </div>
-    ${r['Style Notes'] ? `<div style="font-size:13px;margin-top:8px;"><span class="k" style="color:#777;font-size:10.5px;text-transform:uppercase;">Style Notes</span>${esc(r['Style Notes'])}</div>` : ''}
-    ${r['Additional Notes'] ? `<div style="font-size:13px;margin-top:8px;"><span class="k" style="color:#777;font-size:10.5px;text-transform:uppercase;">Additional Notes</span>${esc(r['Additional Notes'])}</div>` : ''}
-    
-    <h3>Pricing &amp; Package</h3>
-    <div class="p-grid" style="margin-bottom:12px;">
-      ${row('Base Price (SGD)', r['Base Price (SGD)'] ? parseFloat(r['Base Price (SGD)']).toFixed(2) : '—')}
-      ${row('Discount', r['Discount (%)'] ? r['Discount (%)'] + '%' : '—')}
-      ${row('Discount Notes', r['Discount Notes'] || '—')}
-      ${row('Has Package', r['Has Package'] || 'No')}
-      ${row('Package Type', r['Package Type'] || '—')}
-      ${row('Package Balance (SGD)', r['Package Balance'] ? parseFloat(r['Package Balance']).toFixed(2) : '—')}
-    </div>
-    <div class="p-charge"><span>Total Charges (SGD)</span><span>${finalCharge.toFixed(2)}</span></div>
-    
-    ${photos.length > 0 ? `
-  <h3>Photos</h3>
-  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:10px;margin-top:10px;">
-    ${photos.map(url => `
-      <div style="border:1px solid #ddd;border-radius:4px;overflow:hidden;page-break-inside:avoid;">
-        <img src="${esc(url)}" style="width:100%;height:150px;object-fit:cover;" 
-             onerror="this.parentElement.innerHTML='<div style=\\'padding:20px;text-align:center;color:#999;\\'>Photo unavailable</div>'">
-      </div>
-    `).join('')}
-  </div>
-` : '<p style="color:#999;font-size:12px;">No photos attached</p>'}
-    
-    <div class="p-footer">${esc(BUSINESS_NAME)} | More than a haircut - A calm and comfortable grooming experience.</div>
-  </div>`;
+  // Create photo HTML with better error handling
+  var photoHtml = '';
+  if (photos.length > 0) {
+    photoHtml = '<h3>Photos</h3><div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:10px;margin-top:10px;">';
+    photos.forEach(function(url) {
+      photoHtml += '<div style="border:1px solid #ddd;border-radius:4px;overflow:hidden;page-break-inside:avoid;background:#f9f9f9;min-height:150px;display:flex;align-items:center;justify-content:center;">';
+      photoHtml += '<img src="' + esc(url) + '" style="width:100%;height:150px;object-fit:cover;" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'<div style=\\\'padding:20px;text-align:center;color:#999;\\\'>📷 Photo unavailable</div>\'">';
+      photoHtml += '</div>';
+    });
+    photoHtml += '</div>';
+  } else {
+    photoHtml = '<p style="color:#999;font-size:12px;">No photos attached</p>';
+  }
+  
+  printArea.innerHTML = '<div class="print-doc">' +
+    '<div class="p-head">' +
+      (LOGO_URL ? '<img src="' + esc(LOGO_URL) + '" alt="logo">' : '') +
+      '<div class="biz">' + esc(BUSINESS_NAME) + '</div>' +
+      '<div class="doc-title">Grooming Record<br>' + esc(r['Date of Grooming']||'') + '</div>' +
+    '</div>' +
+    '<h3>Dog &amp; Owner</h3>' +
+    '<div class="p-grid">' +
+      row('Dog Name', r['Dog Name']) +
+      row('Owner Name', r['Owner Name']) +
+      row('Breed', r['Breed']) +
+      row('Gender', r['Gender']) +
+      row('Weight (kg)', r['Weight (kg)']) +
+    '</div>' +
+    '<h3>Service Notes</h3>' +
+    '<div class="p-grid">' +
+      row('Service Required', r['Service Required']) +
+      row('Temperament', formatMultiValue(r['Temperament'])) +
+      row('Shampoo Used', formatMultiValue(r['Shampoo Used'])) +
+    '</div>' +
+    '<h3>Pre-Assessment</h3>' +
+    '<div class="p-grid">' +
+      PRE_ASSESSMENT.map(function(cat){ return row(cat.label, tagVal(cat.key) + (r[cat.key+' Notes'] ? ' — '+r[cat.key+' Notes'] : '')); }).join('') +
+      row('Mats', r['Mats']) +
+    '</div>' +
+    (r['Style Notes'] ? '<div style="font-size:13px;margin-top:8px;"><span class="k" style="color:#777;font-size:10.5px;text-transform:uppercase;">Style Notes</span>' + esc(r['Style Notes']) + '</div>' : '') +
+    (r['Additional Notes'] ? '<div style="font-size:13px;margin-top:8px;"><span class="k" style="color:#777;font-size:10.5px;text-transform:uppercase;">Additional Notes</span>' + esc(r['Additional Notes']) + '</div>' : '') +
+    '<h3>Pricing &amp; Package</h3>' +
+    '<div class="p-grid" style="margin-bottom:12px;">' +
+      row('Base Price (SGD)', r['Base Price (SGD)'] ? parseFloat(r['Base Price (SGD)']).toFixed(2) : '—') +
+      row('Discount', r['Discount (%)'] ? r['Discount (%)'] + '%' : '—') +
+      row('Discount Notes', r['Discount Notes'] || '—') +
+      row('Has Package', r['Has Package'] || 'No') +
+      row('Package Type', r['Package Type'] || '—') +
+      row('Package Balance (SGD)', r['Package Balance'] ? parseFloat(r['Package Balance']).toFixed(2) : '—') +
+    '</div>' +
+    '<div class="p-charge"><span>Total Charges (SGD)</span><span>' + finalCharge.toFixed(2) + '</span></div>' +
+    photoHtml +
+    '<div class="p-footer">' + esc(BUSINESS_NAME) + ' | More than a haircut - A calm and comfortable grooming experience.</div>' +
+  '</div>';
   
   setTimeout(function() {
     window.print();
-  }, 500);
+  }, 1000);
 }
 
 function findDogHistory(dogName, ownerName, excludeId){
@@ -1469,14 +1470,14 @@ function getOwnerPackageBalance(ownerName) {
       ownerName: ownerName
     })
   })
-  .then(res => res.json())
-  .then(result => {
+  .then(function(res) { return res.json(); })
+  .then(function(result) {
     if (result.success && result.packageInfo && result.packageInfo.hasPackage) {
       return result.packageInfo;
     }
     return null;
   })
-  .catch(err => {
+  .catch(function(err) {
     console.error('Error fetching package balance:', err);
     return null;
   });
@@ -1598,44 +1599,67 @@ function attachHandlers(){
   });
 
   setupPricingHandlers();
-  setupPhotoUpload();
+setupPhotoUpload();
 
-  const cancelBtn = document.getElementById('cancelFormBtn');
-  if(cancelBtn) cancelBtn.onclick = ()=>{ state.tab = state.editingId ? 'detail' : 'list'; render(); };
+const cancelBtn = document.getElementById('cancelFormBtn');
+if(cancelBtn) cancelBtn.onclick = function(){ 
+  state.tab = state.editingId ? 'detail' : 'list'; 
+  render(); 
+};
 
-  function tryAutofillFromHistory(){
-  collectFormData();
-  const history = findDogHistory(state.formData['Dog Name'], state.formData['Owner Name'], state.editingId);
-  if(history.length){
-    const latest = history[0];
-    if(!state.formData['Owner Name']) state.formData['Owner Name'] = latest['Owner Name'];
-    if(!state.formData['Breed']) state.formData['Breed'] = latest['Breed'];
-    if(!state.formData['Gender']) state.formData['Gender'] = latest['Gender'];
-  }
-  
-  // Also fetch package balance for this owner
-  if (state.formData['Owner Name']) {
-    getOwnerPackageBalance(state.formData['Owner Name']).then(pkgInfo => {
-      if (pkgInfo && pkgInfo.hasPackage) {
-        state.formData['Has Package'] = 'Yes';
-        state.formData['Package Type'] = pkgInfo.packageType || '';
-        state.formData['Package Balance'] = pkgInfo.balance.toFixed(2);
-      } else {
-        // If no package found, set defaults but don't force "No"
-        // Let the user decide
-      }
-      render();
-    });
-  }
-  render();
+// Dog name change - only fill history
+const dogInput = document.getElementById('f_DogName');
+if(dogInput) {
+  dogInput.onchange = function() {
+    collectFormData();
+    var history = findDogHistory(state.formData['Dog Name'], state.formData['Owner Name'], state.editingId);
+    if(history.length){
+      var latest = history[0];
+      if(!state.formData['Owner Name']) state.formData['Owner Name'] = latest['Owner Name'];
+      if(!state.formData['Breed']) state.formData['Breed'] = latest['Breed'];
+      if(!state.formData['Gender']) state.formData['Gender'] = latest['Gender'];
+    }
+    render();
+  };
 }
 
-  const dogInput = document.getElementById('f_DogName');
-  const ownerInput = document.getElementById('f_OwnerName');
-  if(dogInput) dogInput.onchange = tryAutofillFromHistory;
-  if(ownerInput) ownerInput.onchange = tryAutofillFromHistory;
+// Owner name change - fetch package balance AND history
+const ownerInput = document.getElementById('f_OwnerName');
+if(ownerInput) {
+  ownerInput.onchange = function() {
+    collectFormData();
+    var ownerName = state.formData['Owner Name'];
+    
+    // Fetch package balance for this owner
+    if (ownerName) {
+      getOwnerPackageBalance(ownerName).then(function(pkgInfo) {
+        if (pkgInfo && pkgInfo.hasPackage) {
+          state.formData['Has Package'] = 'Yes';
+          state.formData['Package Type'] = pkgInfo.packageType || '';
+          state.formData['Package Balance'] = pkgInfo.balance.toFixed(2);
+          showToast('Package balance loaded: ' + pkgInfo.balance.toFixed(2));
+        } else {
+          // No package found, set to No
+          state.formData['Has Package'] = 'No';
+          state.formData['Package Balance'] = '';
+          state.formData['Package Type'] = '';
+        }
+        render();
+      });
+    }
+    
+    // Also fill in history data
+    var history = findDogHistory(state.formData['Dog Name'], state.formData['Owner Name'], state.editingId);
+    if(history.length){
+      var latest = history[0];
+      if(!state.formData['Breed']) state.formData['Breed'] = latest['Breed'];
+      if(!state.formData['Gender']) state.formData['Gender'] = latest['Gender'];
+    }
+    render();
+  };
+}
 
-  const saveBtn = document.getElementById('saveFormBtn');
+const saveBtn = document.getElementById('saveFormBtn');
 if(saveBtn) saveBtn.onclick = async ()=>{
   collectFormData();
   
@@ -1650,30 +1674,8 @@ if(saveBtn) saveBtn.onclick = async ()=>{
   const finalCharge = basePrice * (1 - discount / 100);
   state.formData['Charges (SGD)'] = finalCharge.toFixed(2);
   
-  // Deduct from package balance if "Has Package" is "Yes"
-  if (state.formData['Has Package'] === 'Yes') {
-    const currentBalance = parseFloat(state.formData['Package Balance']) || 0;
-    const newBalance = Math.max(0, currentBalance - finalCharge);
-    state.formData['Package Balance'] = newBalance.toFixed(2);
-    
-    // Show warning if insufficient
-    if (currentBalance < finalCharge) {
-      const shortAmount = (finalCharge - currentBalance).toFixed(2);
-      const confirmSave = confirm(
-        `⚠️ INSUFFICIENT PACKAGE BALANCE!\n\n` +
-        `Current Balance: ${currentBalance.toFixed(2)}\n` +
-        `Total Charges: ${finalCharge.toFixed(2)}\n` +
-        `Short by: ${shortAmount}\n\n` +
-        `The package balance will go to 0.00 and the remaining ${shortAmount} will need to be paid separately.\n\n` +
-        `Do you want to continue?`
-      );
-      if (!confirmSave) {
-        saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record';
-        saveBtn.disabled = false;
-        return;
-      }
-    }
-  }
+  // IMPORTANT: Do NOT deduct balance here - let the backend handle it
+  // The balance will be recalculated by the backend after save
   
   saveBtn.textContent = 'Saving…'; 
   saveBtn.disabled = true;
