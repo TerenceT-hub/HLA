@@ -728,12 +728,6 @@ function renderList(){
   return html;
 }
 
-function renderDetail(){
-  const r = state.records.find(x=>x['Record ID']===state.detailId);
-  if(!r) return `<div class="empty-state">Record not found.</div>`;
-  function item(label, val){
-    return `<div class="detail-item"><label>${esc(label)}</label><div class="val ${val?'':'empty'}">${val?esc(val):'Not recorded'}</div></div>`;
-  }
   function renderDetail(){
   const r = state.records.find(x=>x['Record ID']===state.detailId);
   if(!r) return `<div class="empty-state">Record not found.</div>`;
