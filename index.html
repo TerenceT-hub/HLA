@@ -606,11 +606,9 @@ async function uploadPhotos(recordId, files) {
   const uploadedUrls = [];
   for (let i = 0; i < files.length; i++) {
     try {
-      // Compress the image
       const dataUrl = await fileToCompressedDataUrl(files[i]);
       const base64Data = dataUrl.substring(dataUrl.indexOf(',') + 1);
       
-      // Get file extension
       const fileExt = files[i].name.split('.').pop().toLowerCase() || 'jpg';
       
       const response = await fetch(APPS_SCRIPT_URL, {
@@ -625,14 +623,14 @@ async function uploadPhotos(recordId, files) {
       });
       
       const result = await response.json();
-      console.log('Upload result:', result); // Debug log
+      console.log('Upload result:', result);
       
       if (!result.success) {
         return { success: false, error: result.error || 'Upload failed' };
       }
       if (result.url) {
         uploadedUrls.push(result.url);
-        console.log('Uploaded URL:', result.url); // Debug log
+        console.log('Uploaded URL:', result.url);
       }
     } catch (err) {
       console.error('Upload error:', err);
@@ -749,31 +747,104 @@ function renderDetail(){
     </div></div>`;
   }
   
-  // In renderDetail(), update the photos section
-const photos = (r['Photos'] || '').split(',').map(function(url) { 
-  return url.trim(); 
-}).filter(Boolean);
-
-// Then the photo gallery:
-<div id="photoGallery" style="display:${photos.length > 0 ? 'flex' : 'none'};flex-wrap:wrap;gap:12px;margin-top:12px;">
-  ${photos.map((url, index) => {
-    // Make sure the URL is valid and starts with https
-    var cleanUrl = url.trim();
-    if (cleanUrl && !cleanUrl.startsWith('http')) {
-      cleanUrl = 'https://' + cleanUrl;
-    }
-    return `
-      <div class="photo-thumbnail" style="position:relative;width:120px;height:120px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:#f5f5f5;display:flex;align-items:center;justify-content:center;">
-        <img src="${esc(cleanUrl)}" 
-             style="width:100%;height:100%;object-fit:cover;" 
-             onclick="window.open('${esc(cleanUrl)}', '_blank')" 
-             onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\\'padding:20px;text-align:center;color:#999;font-size:12px;\\'>📷<br>Photo ${index + 1}</div>'">
-        <button type="button" class="remove-btn" data-url="${esc(cleanUrl)}" style="position:absolute;top:4px;right:4px;background:var(--clay);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:14px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;z-index:5;">×</button>
-        <div class="photo-number" style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.6);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;z-index:5;">${index + 1}/5</div>
+  const photos = (r['Photos'] || '').split(',').map(function(url) { 
+    return url.trim(); 
+  }).filter(Boolean);
+  
+  let html = `<div class="card">
+    <div class="detail-header">
+      <div>
+        <h2>${esc(r['Dog Name']||'Unnamed')}</h2>
+        <div class="sub">${esc(r['Owner Name']||'')} · Groomed ${esc(r['Date of Grooming']||'—')}</div>
       </div>
-    `;
-  }).join('')}
-</div>
+      <div class="detail-actions">
+        <button class="btn secondary" id="exportPdfBtn">Export as PDF</button>
+        <button class="btn secondary" id="editBtn">Edit</button>
+        <button class="btn danger" id="deleteBtn">Delete</button>
+      </div>
+    </div>
+    <div class="detail-grid">
+      ${item('Breed', r['Breed'])}
+      ${tagItem('Gender', 'Gender', GENDER.options)}
+      ${item('Weight (kg)', r['Weight (kg)'])}
+      ${tagItem('Service Required', 'Service Required', SERVICE.options)}
+      ${item('Base Price (SGD)', r['Base Price (SGD)'] ? r['Base Price (SGD)'] : (r['Charges (SGD)'] ? r['Charges (SGD)'] : ''))}
+      ${item('Discount', r['Discount (%)'] ? r['Discount (%)'] + '%' : '')}
+      ${item('Discount Notes', r['Discount Notes'] || '')}
+      ${item('Final Charges (SGD)', r['Charges (SGD)'] ? r['Charges (SGD)'] : '')}
+      ${item('Has Package', r['Has Package'] || 'No')}
+      ${item('Package Type', r['Package Type'] || '')}
+      ${item('Package Balance (SGD)', r['Package Balance'] ? r['Package Balance'] : '')}
+    </div>
+    <div class="section" style="padding-top:6px;">
+      <div class="section-title"><span class="num">01</span><h2>Pre-Assessment</h2></div>
+      <div class="detail-grid">
+        ${PRE_ASSESSMENT.map(cat => `
+          ${tagItem(cat.label, cat.key, cat.options)}
+          ${r[cat.key+' Notes'] ? `<div class="detail-item"><label>${esc(cat.label)} Notes</label><div class="val">${esc(r[cat.key+' Notes'])}</div></div>` : ''}
+        `).join('')}
+        ${tagItem('Mats', 'Mats', MATS.options)}
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title"><span class="num">02</span><h2>Temperament &amp; Notes</h2></div>
+      <div class="detail-grid">
+        ${tagItem('Temperament', 'Temperament', TEMPERAMENT.options)}
+        ${item('Shampoo Used', r['Shampoo Used'])}
+      </div>
+      ${item('Specific Request / Style Notes', r['Style Notes'])}
+      ${item('Additional Notes', r['Additional Notes'])}
+    </div>
+    ${(() => {
+      const history = findDogHistory(r['Dog Name'], r['Owner Name'], r['Record ID']);
+      if(history.length === 0) return '';
+      return `<div class="section" style="padding-top:6px;">
+        <div class="section-title"><span class="num">03</span><h2>Visit History</h2></div>
+        ${history.map(h=>`
+          <div class="record-tag history-row" data-id="${esc(h['Record ID'])}" style="margin-bottom:8px;">
+            <span class="punch"></span>
+            <div class="info">
+              <div class="dog">${esc(h['Service Required']||'Visit')}</div>
+              <div class="meta">${esc(h['Temperament']||'—')}${h['Style Notes'] ? ' · '+esc(h['Style Notes']) : ''}</div>
+            </div>
+            <div class="date">${esc(h['Date of Grooming']||'')}${h['Charges (SGD)'] ? +esc(h['Charges (SGD)']) : ''}</div>
+          </div>`).join('')}
+      </div>`;
+    })()}
+    <div class="section">
+      <div class="section-title"><span class="num">04</span><h2>Photos</h2></div>
+      <div style="background:var(--sage-soft);border:1px solid var(--sage);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;">
+        <div style="font-size:13px;color:var(--sage);">
+          💡 <strong>Note:</strong> Please save the record first before uploading photos. Maximum 5 photos.
+        </div>
+      </div>
+      
+      <div class="photo-upload-area" id="photoUploadArea">
+        <div style="font-size:32px;">📷</div>
+        <div style="font-size:13px;color:var(--ink-soft);margin:8px 0;">Click or drag photos here</div>
+        <div style="font-size:11px;color:var(--ink-soft);">Maximum 5 photos (JPG, PNG, GIF)</div>
+        <div class="upload-progress">Uploading...</div>
+        <input type="file" id="photoInput" multiple accept="image/*" style="display:none;">
+      </div>
+      
+      <div id="photoGallery" style="display:${photos.length > 0 ? 'flex' : 'none'};flex-wrap:wrap;gap:12px;margin-top:12px;">
+        ${photos.map((url, index) => {
+          var cleanUrl = url.trim();
+          if (cleanUrl && !cleanUrl.startsWith('http')) {
+            cleanUrl = 'https://' + cleanUrl;
+          }
+          return `
+            <div class="photo-thumbnail" style="position:relative;width:120px;height:120px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:#f5f5f5;display:flex;align-items:center;justify-content:center;">
+              <img src="${esc(cleanUrl)}" 
+                   style="width:100%;height:100%;object-fit:cover;" 
+                   onclick="window.open('${esc(cleanUrl)}', '_blank')" 
+                   onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\\'padding:20px;text-align:center;color:#999;font-size:12px;\\'>📷<br>Photo ${index + 1}</div>'">
+              <button type="button" class="remove-btn" data-url="${esc(cleanUrl)}" style="position:absolute;top:4px;right:4px;background:var(--clay);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:14px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;z-index:5;">×</button>
+              <div class="photo-number" style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.6);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;z-index:5;">${index + 1}/5</div>
+            </div>
+          `;
+        }).join('')}
+      </div>
       ${photos.length === 0 ? `<div style="text-align:center;color:var(--ink-soft);font-size:13px;padding:20px 0;">No photos uploaded yet</div>` : ''}
       <div style="font-size:11px;color:var(--ink-soft);margin-top:8px;">${photos.length}/5 photos used</div>
     </div>
@@ -1012,33 +1083,31 @@ function exportRecordAsPdf(r){
     finalCharge = basePrice * (1 - discount / 100);
   }
   
-  // Get photos - handle both string and array formats
-var photos = [];
-if (r['Photos']) {
-  if (typeof r['Photos'] === 'string') {
-    photos = r['Photos'].split(',').map(function(url) { return url.trim(); }).filter(Boolean);
-  } else if (Array.isArray(r['Photos'])) {
-    photos = r['Photos'].filter(Boolean);
-  }
-}
-
-// Create photo HTML with better error handling
-var photoHtml = '';
-if (photos.length > 0) {
-  photoHtml = '<h3>Photos</h3><div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:10px;margin-top:10px;">';
-  photos.forEach(function(url, index) {
-    var cleanUrl = url.trim();
-    if (cleanUrl && !cleanUrl.startsWith('http')) {
-      cleanUrl = 'https://' + cleanUrl;
+  var photos = [];
+  if (r['Photos']) {
+    if (typeof r['Photos'] === 'string') {
+      photos = r['Photos'].split(',').map(function(url) { return url.trim(); }).filter(Boolean);
+    } else if (Array.isArray(r['Photos'])) {
+      photos = r['Photos'].filter(Boolean);
     }
-    photoHtml += '<div style="border:1px solid #ddd;border-radius:4px;overflow:hidden;page-break-inside:avoid;background:#f9f9f9;min-height:150px;display:flex;align-items:center;justify-content:center;flex-direction:column;">';
-    photoHtml += '<img src="' + esc(cleanUrl) + '" style="width:100%;height:150px;object-fit:cover;" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'<div style=\\\'padding:20px;text-align:center;color:#999;font-size:14px;\\\'>📷 Photo ' + (index + 1) + '</div>\'">';
+  }
+
+  var photoHtml = '';
+  if (photos.length > 0) {
+    photoHtml = '<h3>Photos</h3><div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:10px;margin-top:10px;">';
+    photos.forEach(function(url, index) {
+      var cleanUrl = url.trim();
+      if (cleanUrl && !cleanUrl.startsWith('http')) {
+        cleanUrl = 'https://' + cleanUrl;
+      }
+      photoHtml += '<div style="border:1px solid #ddd;border-radius:4px;overflow:hidden;page-break-inside:avoid;background:#f9f9f9;min-height:150px;display:flex;align-items:center;justify-content:center;flex-direction:column;">';
+      photoHtml += '<img src="' + esc(cleanUrl) + '" style="width:100%;height:150px;object-fit:cover;" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'<div style=\\\'padding:20px;text-align:center;color:#999;font-size:14px;\\\'>📷 Photo ' + (index + 1) + '</div>\'">';
+      photoHtml += '</div>';
+    });
     photoHtml += '</div>';
-  });
-  photoHtml += '</div>';
-} else {
-  photoHtml = '<p style="color:#999;font-size:12px;">No photos attached</p>';
-}
+  } else {
+    photoHtml = '<p style="color:#999;font-size:12px;">No photos attached</p>';
+  }
   
   printArea.innerHTML = '<div class="print-doc">' +
     '<div class="p-head">' +
@@ -1517,27 +1586,25 @@ function attachHandlers(){
   });
 
   document.querySelectorAll('.package-toggle').forEach(btn=>{
-  btn.onclick = ()=>{
-    collectFormData();
-    const value = btn.dataset.package;
-    state.formData['Has Package'] = value;
-    
-    // If switching to "Yes", try to fetch the owner's package balance
-    if (value === 'Yes' && state.formData['Owner Name']) {
-      getOwnerPackageBalance(state.formData['Owner Name']).then(pkgInfo => {
-        if (pkgInfo && pkgInfo.hasPackage) {
-          state.formData['Package Balance'] = pkgInfo.balance.toFixed(2);
-          state.formData['Package Type'] = pkgInfo.packageType || '';
-          render();
-        } else {
-          // If no package found, prompt user to enter balance manually
-          showToast('No existing package found. Please enter balance manually.');
-        }
-      });
-    }
-    render();
-  };
-});
+    btn.onclick = ()=>{
+      collectFormData();
+      const value = btn.dataset.package;
+      state.formData['Has Package'] = value;
+      
+      if (value === 'Yes' && state.formData['Owner Name']) {
+        getOwnerPackageBalance(state.formData['Owner Name']).then(pkgInfo => {
+          if (pkgInfo && pkgInfo.hasPackage) {
+            state.formData['Package Balance'] = pkgInfo.balance.toFixed(2);
+            state.formData['Package Type'] = pkgInfo.packageType || '';
+            render();
+          } else {
+            showToast('No existing package found. Please enter balance manually.');
+          }
+        });
+      }
+      render();
+    };
+  });
 
   document.querySelectorAll('.shampoo-option').forEach(opt=>{
     opt.onclick = ()=>{
@@ -1551,110 +1618,103 @@ function attachHandlers(){
   });
 
   setupPricingHandlers();
-setupPhotoUpload();
+  setupPhotoUpload();
 
-const cancelBtn = document.getElementById('cancelFormBtn');
-if(cancelBtn) cancelBtn.onclick = function(){ 
-  state.tab = state.editingId ? 'detail' : 'list'; 
-  render(); 
-};
-
-// Dog name change - only fill history
-const dogInput = document.getElementById('f_DogName');
-if(dogInput) {
-  dogInput.onchange = function() {
-    collectFormData();
-    var history = findDogHistory(state.formData['Dog Name'], state.formData['Owner Name'], state.editingId);
-    if(history.length){
-      var latest = history[0];
-      if(!state.formData['Owner Name']) state.formData['Owner Name'] = latest['Owner Name'];
-      if(!state.formData['Breed']) state.formData['Breed'] = latest['Breed'];
-      if(!state.formData['Gender']) state.formData['Gender'] = latest['Gender'];
-    }
-    render();
+  const cancelBtn = document.getElementById('cancelFormBtn');
+  if(cancelBtn) cancelBtn.onclick = function(){ 
+    state.tab = state.editingId ? 'detail' : 'list'; 
+    render(); 
   };
-}
 
-// Owner name change - fetch package balance AND history
-const ownerInput = document.getElementById('f_OwnerName');
-if(ownerInput) {
-  ownerInput.onchange = function() {
+  // Dog name change - only fill history
+  const dogInput = document.getElementById('f_DogName');
+  if(dogInput) {
+    dogInput.onchange = function() {
+      collectFormData();
+      var history = findDogHistory(state.formData['Dog Name'], state.formData['Owner Name'], state.editingId);
+      if(history.length){
+        var latest = history[0];
+        if(!state.formData['Owner Name']) state.formData['Owner Name'] = latest['Owner Name'];
+        if(!state.formData['Breed']) state.formData['Breed'] = latest['Breed'];
+        if(!state.formData['Gender']) state.formData['Gender'] = latest['Gender'];
+      }
+      render();
+    };
+  }
+
+  // Owner name change - fetch package balance AND history
+  const ownerInput = document.getElementById('f_OwnerName');
+  if(ownerInput) {
+    ownerInput.onchange = function() {
+      collectFormData();
+      var ownerName = state.formData['Owner Name'];
+      
+      if (ownerName) {
+        getOwnerPackageBalance(ownerName).then(function(pkgInfo) {
+          if (pkgInfo && pkgInfo.hasPackage) {
+            state.formData['Has Package'] = 'Yes';
+            state.formData['Package Type'] = pkgInfo.packageType || '';
+            state.formData['Package Balance'] = pkgInfo.balance.toFixed(2);
+            showToast('Package balance loaded: ' + pkgInfo.balance.toFixed(2));
+          } else {
+            state.formData['Has Package'] = 'No';
+            state.formData['Package Balance'] = '';
+            state.formData['Package Type'] = '';
+          }
+          render();
+        });
+      }
+      
+      var history = findDogHistory(state.formData['Dog Name'], state.formData['Owner Name'], state.editingId);
+      if(history.length){
+        var latest = history[0];
+        if(!state.formData['Breed']) state.formData['Breed'] = latest['Breed'];
+        if(!state.formData['Gender']) state.formData['Gender'] = latest['Gender'];
+      }
+      render();
+    };
+  }
+
+  const saveBtn = document.getElementById('saveFormBtn');
+  if(saveBtn) saveBtn.onclick = async ()=>{
     collectFormData();
-    var ownerName = state.formData['Owner Name'];
     
-    // Fetch package balance for this owner
-    if (ownerName) {
-      getOwnerPackageBalance(ownerName).then(function(pkgInfo) {
-        if (pkgInfo && pkgInfo.hasPackage) {
-          state.formData['Has Package'] = 'Yes';
-          state.formData['Package Type'] = pkgInfo.packageType || '';
-          state.formData['Package Balance'] = pkgInfo.balance.toFixed(2);
-          showToast('Package balance loaded: ' + pkgInfo.balance.toFixed(2));
-        } else {
-          // No package found, set to No
-          state.formData['Has Package'] = 'No';
-          state.formData['Package Balance'] = '';
-          state.formData['Package Type'] = '';
-        }
-        render();
-      });
+    if(!state.formData['Dog Name']){ 
+      showToast('Please enter a dog name'); 
+      return; 
     }
     
-    // Also fill in history data
-    var history = findDogHistory(state.formData['Dog Name'], state.formData['Owner Name'], state.editingId);
-    if(history.length){
-      var latest = history[0];
-      if(!state.formData['Breed']) state.formData['Breed'] = latest['Breed'];
-      if(!state.formData['Gender']) state.formData['Gender'] = latest['Gender'];
+    const basePrice = parseFloat(state.formData['Base Price (SGD)']) || 0;
+    const discount = parseFloat(state.formData['Discount (%)']) || 0;
+    const finalCharge = basePrice * (1 - discount / 100);
+    state.formData['Charges (SGD)'] = finalCharge.toFixed(2);
+    
+    saveBtn.textContent = 'Saving…'; 
+    saveBtn.disabled = true;
+    
+    try{
+      let result;
+      if(state.editingId){
+        await apiUpdate(state.editingId, state.formData);
+        showToast('Record updated');
+        state.detailId = state.editingId;
+      }else{
+        result = await apiCreate(state.formData);
+        state.editingId = result.id;
+        state.detailId = result.id;
+        showToast('Record created!');
+      }
+      
+      await refreshRecords();
+      state.tab = 'detail';
+      render();
+    }catch(err){
+      showToast('Could not save — check connection');
+      console.error(err);
+      saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record'; 
+      saveBtn.disabled = false;
     }
-    render();
   };
-}
-
-const saveBtn = document.getElementById('saveFormBtn');
-if(saveBtn) saveBtn.onclick = async ()=>{
-  collectFormData();
-  
-  if(!state.formData['Dog Name']){ 
-    showToast('Please enter a dog name'); 
-    return; 
-  }
-  
-  // Calculate final charges
-  const basePrice = parseFloat(state.formData['Base Price (SGD)']) || 0;
-  const discount = parseFloat(state.formData['Discount (%)']) || 0;
-  const finalCharge = basePrice * (1 - discount / 100);
-  state.formData['Charges (SGD)'] = finalCharge.toFixed(2);
-  
-  // IMPORTANT: Do NOT deduct balance here - let the backend handle it
-  // The balance will be recalculated by the backend after save
-  
-  saveBtn.textContent = 'Saving…'; 
-  saveBtn.disabled = true;
-  
-  try{
-    let result;
-    if(state.editingId){
-      await apiUpdate(state.editingId, state.formData);
-      showToast('Record updated');
-      state.detailId = state.editingId;
-    }else{
-      result = await apiCreate(state.formData);
-      state.editingId = result.id;
-      state.detailId = result.id;
-      showToast('Record created!');
-    }
-    
-    await refreshRecords();
-    state.tab = 'detail';
-    render();
-  }catch(err){
-    showToast('Could not save — check connection');
-    console.error(err);
-    saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record'; 
-    saveBtn.disabled = false;
-  }
-};
 }
 
 function collectFormData(){
