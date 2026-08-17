@@ -1117,6 +1117,7 @@ function renderForm(){
           <input type="text" id="f_DiscountNotes" value="${esc(d['Discount Notes'] || '')}" placeholder="Why was the discount applied?">
         </div>
         <div id="priceCalculation" style="margin-top:10px;font-size:12.5px;color:var(--ink-soft);"></div>
+        <div id="packageBalanceWarning"></div>
       </div>
       <div class="field"><label>Temperament &amp; Behavior During Grooming</label>${multiPillGroup(TEMPERAMENT, d['Temperament'])}
         ${parseMultiValue(d['Temperament']).includes('Other') ? `<div class="assess-note"><input type="text" id="f_TemperamentNotes" placeholder="Describe behavior" value="${esc(d['Temperament Notes'])}"></div>` : ''}
@@ -1174,13 +1175,34 @@ function calculatePrice(){
       summaryEl.innerHTML = `Final charge: <strong>${finalPrice.toFixed(2)}</strong>`;
     }
   }
+
+  const warningEl = document.getElementById('packageBalanceWarning');
+  if(warningEl){
+    const hasPkgBtn = document.querySelector('.package-toggle.selected[data-package="Yes"]');
+    const balanceEl = document.getElementById('f_PackageBalance');
+    const currentBalance = balanceEl ? (parseFloat(balanceEl.value) || 0) : 0;
+    if(hasPkgBtn && baseEl.value !== '' && currentBalance < finalPrice){
+      const shortBy = (finalPrice - currentBalance).toFixed(2);
+      const ownerEl = document.getElementById('f_OwnerName');
+      const ownerName = ownerEl ? (ownerEl.value || 'this owner') : 'this owner';
+      warningEl.innerHTML = `<div style="margin-top:10px;padding:10px 12px;background:var(--clay-soft);border:1px solid var(--clay);border-radius:var(--radius);color:var(--clay);font-size:12.5px;">
+        <strong>⚠ Insufficient package balance</strong> — short by ${shortBy}.
+        Current balance (${currentBalance.toFixed(2)}) won't fully cover this ${finalPrice.toFixed(2)} charge.
+        Either ask ${esc(ownerName)} to reload the package, or collect ${shortBy} from the customer separately.
+      </div>`;
+    } else {
+      warningEl.innerHTML = '';
+    }
+  }
 }
 
 function setupPricingHandlers(){
   const baseEl = document.getElementById('f_BasePrice');
   const discountEl = document.getElementById('f_Discount');
+  const balanceEl = document.getElementById('f_PackageBalance');
   if(baseEl) baseEl.oninput = calculatePrice;
   if(discountEl) discountEl.oninput = calculatePrice;
+  if(balanceEl) balanceEl.oninput = calculatePrice;
 
   document.querySelectorAll('.discount-preset').forEach(btn=>{
     btn.onclick = ()=>{
@@ -1517,32 +1539,15 @@ if(saveBtn) saveBtn.onclick = async ()=>{
   const finalCharge = basePrice * (1 - discount / 100);
   state.formData['Charges (SGD)'] = finalCharge.toFixed(2);
   
-  // Check package balance if package is selected
+  // Check package balance if package is selected — no blocking dialog; the
+  // shortfall is already shown as an inline warning above before Save is clicked.
   if (state.formData['Has Package'] === 'Yes') {
     const currentBalance = parseFloat(state.formData['Package Balance']) || 0;
-    
-    // Check if charges exceed balance
+
     if (currentBalance < finalCharge) {
       const shortAmount = (finalCharge - currentBalance).toFixed(2);
-      const confirmMessage = 
-        '⚠️ INSUFFICIENT PACKAGE BALANCE!\n\n' +
-        'Current Package Balance: ' + currentBalance.toFixed(2) + '\n' +
-        'Total Charges: ' + finalCharge.toFixed(2) + '\n' +
-        'Short by: ' + shortAmount + '\n\n' +
-        'Options:\n' +
-        '1. Click "OK" to continue - Balance will go to 0.00 and the remaining ' + shortAmount + ' will be charged separately.\n' +
-        '2. Click "Cancel" to go back and adjust the charges or reload credit.\n\n' +
-        '💡 Tip: You can reload the package by updating the Package Balance field.';
-      
-      const confirmSave = confirm(confirmMessage);
-      if (!confirmSave) {
-        saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record';
-        saveBtn.disabled = false;
-        return;
-      }
-      // Set balance to 0 if insufficient
       state.formData['Package Balance'] = '0.00';
-      showToast('Package balance depleted. Remaining ' + shortAmount + ' charged separately.');
+      showToast('Package balance depleted — ' + shortAmount + ' to collect separately');
     } else {
       const newBalance = currentBalance - finalCharge;
       state.formData['Package Balance'] = newBalance.toFixed(2);
