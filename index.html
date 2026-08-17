@@ -734,6 +734,12 @@ function renderDetail(){
   function item(label, val){
     return `<div class="detail-item"><label>${esc(label)}</label><div class="val ${val?'':'empty'}">${val?esc(val):'Not recorded'}</div></div>`;
   }
+  function renderDetail(){
+  const r = state.records.find(x=>x['Record ID']===state.detailId);
+  if(!r) return `<div class="empty-state">Record not found.</div>`;
+  function item(label, val){
+    return `<div class="detail-item"><label>${esc(label)}</label><div class="val ${val?'':'empty'}">${val?esc(val):'Not recorded'}</div></div>`;
+  }
   function tagItem(label, key, options){
     const val = r[key];
     const values = parseMultiValue(val);
@@ -747,259 +753,124 @@ function renderDetail(){
     </div></div>`;
   }
   
-  // In renderDetail(), update the photos section
-const photos = (r['Photos'] || '').split(',').map(function(url) { 
-  return url.trim(); 
-}).filter(Boolean);
+  const photos = (r['Photos'] || '').split(',').map(function(url) { 
+    return url.trim(); 
+  }).filter(Boolean);
 
-console.log('Photos URLs:', photos); // Debug: Check what URLs are stored
+  console.log('Photos URLs:', photos);
 
-// Then the photo gallery - with better image handling
-<div id="photoGallery" style="display:${photos.length > 0 ? 'flex' : 'none'};flex-wrap:wrap;gap:12px;margin-top:12px;">
-  ${photos.map((url, index) => {
-    // Clean the URL
-    var cleanUrl = url.trim();
-    if (cleanUrl && !cleanUrl.startsWith('http')) {
-      cleanUrl = 'https://' + cleanUrl;
-    }
-    // Check if it's a Google Drive URL
-    var isDriveUrl = cleanUrl.includes('drive.google.com') || cleanUrl.includes('googleusercontent.com');
-    return `
-      <div class="photo-thumbnail" style="position:relative;width:120px;height:120px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:#f5f5f5;display:flex;align-items:center;justify-content:center;">
-        ${isDriveUrl ? `
-          <img src="${esc(cleanUrl)}" 
-               style="width:100%;height:100%;object-fit:cover;" 
-               onclick="window.open('${esc(cleanUrl)}', '_blank')" 
-               onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\\'padding:20px;text-align:center;color:#999;font-size:12px;\\'>📷<br>Photo ${index + 1}</div>'">
-        ` : `
-          <div style="padding:20px;text-align:center;color:#999;font-size:12px;">
-            📷<br>Photo ${index + 1}
-            <div style="font-size:9px;color:#ccc;word-break:break-all;">${cleanUrl.substring(0, 30)}...</div>
-          </div>
-        `}
-        <button type="button" class="remove-btn" data-url="${esc(cleanUrl)}" style="position:absolute;top:4px;right:4px;background:var(--clay);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:14px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;z-index:5;">×</button>
-        <div class="photo-number" style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.6);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;z-index:5;">${index + 1}/5</div>
+  // Build the photo gallery HTML
+  let photoGalleryHtml = '';
+  if (photos.length > 0) {
+    photoGalleryHtml = photos.map((url, index) => {
+      var cleanUrl = url.trim();
+      if (cleanUrl && !cleanUrl.startsWith('http')) {
+        cleanUrl = 'https://' + cleanUrl;
+      }
+      var isDriveUrl = cleanUrl.includes('drive.google.com') || cleanUrl.includes('googleusercontent.com');
+      return `
+        <div class="photo-thumbnail" style="position:relative;width:120px;height:120px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:#f5f5f5;display:flex;align-items:center;justify-content:center;">
+          ${isDriveUrl ? `
+            <img src="${esc(cleanUrl)}" 
+                 style="width:100%;height:100%;object-fit:cover;" 
+                 onclick="window.open('${esc(cleanUrl)}', '_blank')" 
+                 onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\\'padding:20px;text-align:center;color:#999;font-size:12px;\\'>📷<br>Photo ${index + 1}</div>'">
+          ` : `
+            <div style="padding:20px;text-align:center;color:#999;font-size:12px;">
+              📷<br>Photo ${index + 1}
+              <div style="font-size:9px;color:#ccc;word-break:break-all;">${cleanUrl.substring(0, 30)}...</div>
+            </div>
+          `}
+          <button type="button" class="remove-btn" data-url="${esc(cleanUrl)}" style="position:absolute;top:4px;right:4px;background:var(--clay);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:14px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;z-index:5;">×</button>
+          <div class="photo-number" style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.6);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;z-index:5;">${index + 1}/5</div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  let html = `<div class="card">
+    <div class="detail-header">
+      <div>
+        <h2>${esc(r['Dog Name']||'Unnamed')}</h2>
+        <div class="sub">${esc(r['Owner Name']||'')} · Groomed ${esc(r['Date of Grooming']||'—')}</div>
       </div>
-    `;
-  }).join('')}
-</div>
+      <div class="detail-actions">
+        <button class="btn secondary" id="exportPdfBtn">Export as PDF</button>
+        <button class="btn secondary" id="editBtn">Edit</button>
+        <button class="btn danger" id="deleteBtn">Delete</button>
+      </div>
+    </div>
+    <div class="detail-grid">
+      ${item('Breed', r['Breed'])}
+      ${tagItem('Gender', 'Gender', GENDER.options)}
+      ${item('Weight (kg)', r['Weight (kg)'])}
+      ${tagItem('Service Required', 'Service Required', SERVICE.options)}
+      ${item('Base Price (SGD)', r['Base Price (SGD)'] ? r['Base Price (SGD)'] : (r['Charges (SGD)'] ? r['Charges (SGD)'] : ''))}
+      ${item('Discount', r['Discount (%)'] ? r['Discount (%)'] + '%' : '')}
+      ${item('Discount Notes', r['Discount Notes'] || '')}
+      ${item('Final Charges (SGD)', r['Charges (SGD)'] ? r['Charges (SGD)'] : '')}
+      ${item('Has Package', r['Has Package'] || 'No')}
+      ${item('Package Type', r['Package Type'] || '')}
+      ${item('Package Balance (SGD)', r['Package Balance'] ? r['Package Balance'] : '')}
+    </div>
+    <div class="section" style="padding-top:6px;">
+      <div class="section-title"><span class="num">01</span><h2>Pre-Assessment</h2></div>
+      <div class="detail-grid">
+        ${PRE_ASSESSMENT.map(cat => `
+          ${tagItem(cat.label, cat.key, cat.options)}
+          ${r[cat.key+' Notes'] ? `<div class="detail-item"><label>${esc(cat.label)} Notes</label><div class="val">${esc(r[cat.key+' Notes'])}</div></div>` : ''}
+        `).join('')}
+        ${tagItem('Mats', 'Mats', MATS.options)}
+      </div>
+    </div>
+    <div class="section">
+      <div class="section-title"><span class="num">02</span><h2>Temperament &amp; Notes</h2></div>
+      <div class="detail-grid">
+        ${tagItem('Temperament', 'Temperament', TEMPERAMENT.options)}
+        ${item('Shampoo Used', r['Shampoo Used'])}
+      </div>
+      ${item('Specific Request / Style Notes', r['Style Notes'])}
+      ${item('Additional Notes', r['Additional Notes'])}
+    </div>
+    ${(() => {
+      const history = findDogHistory(r['Dog Name'], r['Owner Name'], r['Record ID']);
+      if(history.length === 0) return '';
+      return `<div class="section" style="padding-top:6px;">
+        <div class="section-title"><span class="num">03</span><h2>Visit History</h2></div>
+        ${history.map(h=>`
+          <div class="record-tag history-row" data-id="${esc(h['Record ID'])}" style="margin-bottom:8px;">
+            <span class="punch"></span>
+            <div class="info">
+              <div class="dog">${esc(h['Service Required']||'Visit')}</div>
+              <div class="meta">${esc(h['Temperament']||'—')}${h['Style Notes'] ? ' · '+esc(h['Style Notes']) : ''}</div>
+            </div>
+            <div class="date">${esc(h['Date of Grooming']||'')}${h['Charges (SGD)'] ? +esc(h['Charges (SGD)']) : ''}</div>
+          </div>`).join('')}
+      </div>`;
+    })()}
+    <div class="section">
+      <div class="section-title"><span class="num">04</span><h2>Photos</h2></div>
+      <div style="background:var(--sage-soft);border:1px solid var(--sage);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;">
+        <div style="font-size:13px;color:var(--sage);">
+          💡 <strong>Note:</strong> Please save the record first before uploading photos. Maximum 5 photos.
+        </div>
+      </div>
+      
+      <div class="photo-upload-area" id="photoUploadArea">
+        <div style="font-size:32px;">📷</div>
+        <div style="font-size:13px;color:var(--ink-soft);margin:8px 0;">Click or drag photos here</div>
+        <div style="font-size:11px;color:var(--ink-soft);">Maximum 5 photos (JPG, PNG, GIF)</div>
+        <div class="upload-progress">Uploading...</div>
+        <input type="file" id="photoInput" multiple accept="image/*" style="display:none;">
+      </div>
+      
+      <div id="photoGallery" style="display:${photos.length > 0 ? 'flex' : 'none'};flex-wrap:wrap;gap:12px;margin-top:12px;">
+        ${photoGalleryHtml}
+      </div>
       ${photos.length === 0 ? `<div style="text-align:center;color:var(--ink-soft);font-size:13px;padding:20px 0;">No photos uploaded yet</div>` : ''}
       <div style="font-size:11px;color:var(--ink-soft);margin-top:8px;">${photos.length}/5 photos used</div>
     </div>
   </div>`;
-  return html;
-}
-
-function monthKey(dateStr){
-  if(!dateStr) return null;
-  const d = new Date(dateStr);
-  if(isNaN(d)) return null;
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
-}
-
-function dayKey(dateStr){
-  if(!dateStr) return null;
-  const d = new Date(dateStr);
-  if(isNaN(d)) return null;
-  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
-}
-
-function monthLabel(key){
-  const [y,m] = key.split('-');
-  const d = new Date(Number(y), Number(m)-1, 1);
-  return d.toLocaleDateString('en-US', { month:'long', year:'numeric' });
-}
-
-function dayLabel(key){
-  const [y,m,d] = key.split('-');
-  const date = new Date(Number(y), Number(m)-1, Number(d));
-  return date.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
-}
-
-function renderRevenue(){
-  const byMonth = {};
-  const byDay = {};
-  let grandTotal = 0, grandCount = 0, grandDiscount = 0, grandDiscountCount = 0;
-  
-  state.records.forEach(r=>{
-    const charge = parseFloat(r['Charges (SGD)']) || 0;
-    const basePrice = parseFloat(r['Base Price (SGD)']) || 0;
-    const discount = parseFloat(r['Discount (%)']) || 0;
-    const discountAmount = basePrice * (discount / 100);
-    const hasDiscount = discount > 0;
-    
-    const monthKeyStr = monthKey(r['Date of Grooming']) || 'unspecified';
-    const dayKeyStr = dayKey(r['Date of Grooming']) || 'unspecified';
-    
-    if(!byMonth[monthKeyStr]) byMonth[monthKeyStr] = { 
-      total: 0, 
-      count: 0, 
-      discountTotal: 0, 
-      discountCount: 0,
-      baseTotal: 0
-    };
-    byMonth[monthKeyStr].total += charge;
-    byMonth[monthKeyStr].count += 1;
-    byMonth[monthKeyStr].baseTotal += basePrice;
-    if(hasDiscount) {
-      byMonth[monthKeyStr].discountTotal += discountAmount;
-      byMonth[monthKeyStr].discountCount += 1;
-    }
-    
-    if(dayKeyStr !== 'unspecified') {
-      if(!byDay[dayKeyStr]) byDay[dayKeyStr] = { 
-        total: 0, 
-        count: 0, 
-        discountTotal: 0, 
-        discountCount: 0,
-        baseTotal: 0,
-        records: []
-      };
-      byDay[dayKeyStr].total += charge;
-      byDay[dayKeyStr].count += 1;
-      byDay[dayKeyStr].baseTotal += basePrice;
-      if(hasDiscount) {
-        byDay[dayKeyStr].discountTotal += discountAmount;
-        byDay[dayKeyStr].discountCount += 1;
-      }
-      byDay[dayKeyStr].records.push({
-        dogName: r['Dog Name'] || 'Unnamed',
-        charge: charge,
-        discount: discount,
-        discountAmount: discountAmount,
-        hasDiscount: hasDiscount
-      });
-    }
-    
-    grandTotal += charge;
-    grandCount += 1;
-    if(hasDiscount) {
-      grandDiscount += discountAmount;
-      grandDiscountCount += 1;
-    }
-  });
-  
-  const months = Object.keys(byMonth).filter(k=>k!=='unspecified').sort().reverse();
-  const days = Object.keys(byDay).filter(k=>k!=='unspecified').sort().reverse().slice(0, 30);
-  const avg = grandCount ? (grandTotal/grandCount) : 0;
-  const avgDiscount = grandDiscountCount ? (grandDiscount/grandDiscountCount) : 0;
-  const discountRate = grandTotal ? ((grandDiscount / grandTotal) * 100) : 0;
-  
-  let html = `
-    <div class="revenue-summary">
-      <div class="stat"><div class="eyebrow">Total Revenue</div><div class="num">${grandTotal.toFixed(2)}</div></div>
-      <div class="stat"><div class="eyebrow">Total Records</div><div class="num">${grandCount}</div></div>
-      <div class="stat"><div class="eyebrow">Avg. per Groom</div><div class="num">${avg.toFixed(2)}</div></div>
-    </div>
-    
-    <div class="revenue-summary" style="margin-bottom:24px;">
-      <div class="stat"><div class="eyebrow">Total Discounts Given</div><div class="num" style="color:var(--clay);">${grandDiscount.toFixed(2)}</div></div>
-      <div class="stat"><div class="eyebrow">Avg. Discount per Groom</div><div class="num" style="color:var(--clay);">${avgDiscount.toFixed(2)}</div></div>
-      <div class="stat"><div class="eyebrow">Discount Rate</div><div class="num" style="color:var(--clay);">${discountRate.toFixed(1)}%</div></div>
-    </div>
-  `;
-
-  if(months.length > 0){
-    const maxTotal = Math.max(...months.map(k => byMonth[k].total), 1);
-    html += `<div style="margin-bottom:24px;">
-      <h3 style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:12px;">Monthly Revenue Trend</h3>
-      <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:20px;overflow-x:auto;">
-        <div style="display:flex;align-items:flex-end;gap:8px;min-height:200px;padding-bottom:30px;position:relative;">
-          ${months.slice(0,12).map(k => {
-            const data = byMonth[k];
-            const height = (data.total / maxTotal) * 160;
-            const hasDiscount = data.discountTotal > 0;
-            return `
-              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;min-width:40px;">
-                <div style="width:100%;display:flex;flex-direction:column;align-items:center;gap:2px;">
-                  ${hasDiscount ? `<div style="width:24px;height:${(data.discountTotal / maxTotal) * 160}px;background:var(--clay-soft);border-radius:2px 2px 0 0;opacity:0.7;"></div>` : ''}
-                  <div style="width:${hasDiscount ? '24px' : '32px'};height:${height}px;background:${hasDiscount ? 'var(--sage)' : 'var(--sage-soft)'};border-radius:2px 2px 0 0;position:relative;">
-                    <span style="position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--ink-soft);white-space:nowrap;">${data.total.toFixed(0)}</span>
-                  </div>
-                </div>
-                <div style="font-size:10px;color:var(--ink-soft);text-align:center;margin-top:4px;">${monthLabel(k).slice(0,3)}</div>
-                <div style="font-size:9px;color:var(--ink-soft);">${data.count}</div>
-                ${hasDiscount ? `<div style="font-size:8px;color:var(--clay);">-${data.discountTotal.toFixed(0)}</div>` : ''}
-              </div>
-            `;
-          }).join('')}
-        </div>
-        <div style="display:flex;gap:16px;justify-content:center;font-size:11px;color:var(--ink-soft);border-top:1px solid var(--line-soft);padding-top:12px;margin-top:8px;">
-          <span><span style="display:inline-block;width:12px;height:12px;background:var(--sage);border-radius:2px;vertical-align:middle;margin-right:4px;"></span> Revenue</span>
-          <span><span style="display:inline-block;width:12px;height:12px;background:var(--clay-soft);border-radius:2px;vertical-align:middle;margin-right:4px;"></span> Discounts</span>
-        </div>
-      </div>
-    </div>`;
-  }
-
-  if(days.length > 0){
-    html += `<div style="margin-bottom:24px;">
-      <h3 style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:12px;">Recent Daily Breakdown</h3>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        ${days.slice(0,14).map(k => {
-          const data = byDay[k];
-          const discountPercentage = data.baseTotal ? ((data.discountTotal / data.baseTotal) * 100) : 0;
-          return `
-            <div style="background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;">
-              <div style="font-weight:500;font-size:13px;margin-bottom:4px;">${dayLabel(k)}</div>
-              <div style="display:flex;justify-content:space-between;font-size:13px;">
-                <span>Revenue: <strong>${data.total.toFixed(2)}</strong></span>
-                <span style="color:var(--ink-soft);">${data.count} groom${data.count > 1 ? 's' : ''}</span>
-              </div>
-              ${data.discountTotal > 0 ? `
-                <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--clay);margin-top:2px;">
-                  <span>Discounts: ${data.discountTotal.toFixed(2)}</span>
-                  <span>${discountPercentage.toFixed(1)}% off</span>
-                </div>
-              ` : `<div style="font-size:11px;color:var(--ink-soft);margin-top:2px;">No discounts given</div>`}
-              <div style="margin-top:6px;font-size:11px;color:var(--ink-soft);">
-                ${data.records.slice(0,3).map(r => 
-                  `${r.dogName}${r.hasDiscount ? ' ✨' : ''}`
-                ).join(' · ')}
-                ${data.records.length > 3 ? ` +${data.records.length - 3} more` : ''}
-              </div>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    </div>`;
-  }
-
-  if(months.length === 0){
-    html += `<div class="card empty-state"><div class="stamp">犬</div>
-      <div style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:6px;">No revenue yet</div>
-      <div>Charges (SGD) you record against each groom will roll up here by month.</div>
-    </div>`;
-    return html;
-  }
-
-  html += `<div style="margin-bottom:24px;">
-    <h3 style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:12px;">Monthly Details</h3>
-    ${months.map(k => {
-      const data = byMonth[k];
-      const discountPercentage = data.baseTotal ? ((data.discountTotal / data.baseTotal) * 100) : 0;
-      return `
-        <div class="month-row">
-          <div>
-            <div class="m-label">${esc(monthLabel(k))}</div>
-            <div class="m-meta">${data.count} record${data.count===1?'':'s'} · ${data.discountCount} with discount${data.discountCount !== 1 ? 's' : ''}</div>
-            ${data.discountTotal > 0 ? `<div class="m-meta" style="color:var(--clay);">Discounts: ${data.discountTotal.toFixed(2)} (${discountPercentage.toFixed(1)}%)</div>` : ''}
-          </div>
-          <div style="text-align:right;">
-            <div class="m-total">${data.total.toFixed(2)}</div>
-            ${data.discountTotal > 0 ? `<div style="font-size:11px;color:var(--clay);">-${data.discountTotal.toFixed(2)}</div>` : ''}
-          </div>
-        </div>
-      `;
-    }).join('')}
-  </div>`;
-
-  if(byMonth['unspecified']){
-    html += `<div class="month-row">
-      <div><div class="m-label">Undated records</div><div class="m-meta">${byMonth['unspecified'].count} record(s) without a grooming date</div></div>
-      <div class="m-total">${byMonth['unspecified'].total.toFixed(2)}</div>
-    </div>`;
-  }
   return html;
 }
 
