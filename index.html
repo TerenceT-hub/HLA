@@ -903,7 +903,7 @@ if (photos.length > 0) {
     if (cleanUrl && !cleanUrl.startsWith('http')) {
       cleanUrl = 'https://' + cleanUrl;
     }
-    var displayUrl = getDirectImageUrl(cleanUrl);
+    var displayUrl = cleanUrl;
     photoHtml += '<div style="border:1px solid #ddd;border-radius:4px;overflow:hidden;page-break-inside:avoid;background:#f9f9f9;min-height:150px;display:flex;align-items:center;justify-content:center;flex-direction:column;">';
     photoHtml += '<img src="' + esc(displayUrl) + '" style="width:100%;height:150px;object-fit:cover;" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'<div style=\\\'padding:20px;text-align:center;color:#999;font-size:14px;\\\'>📷 Photo ' + (index + 1) + '</div>\'">';
     photoHtml += '</div>';
@@ -954,9 +954,17 @@ if (photos.length > 0) {
     '<div class="p-footer">' + esc(BUSINESS_NAME) + ' | More than a haircut - A calm and comfortable grooming experience.</div>' +
   '</div>';
   
-  setTimeout(function() {
+  var imgs = Array.prototype.slice.call(printArea.querySelectorAll('img'));
+  if (imgs.length === 0) {
     window.print();
-  }, 1000);
+  } else {
+    var loaded = 0;
+    var done = function(){ loaded++; if (loaded >= imgs.length) window.print(); };
+    imgs.forEach(function(img){
+      if (img.complete) done();
+      else { img.onload = done; img.onerror = done; }
+    });
+  }
 }
 
 function findDogHistory(dogName, ownerName, excludeId){
