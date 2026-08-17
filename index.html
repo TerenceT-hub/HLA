@@ -738,19 +738,7 @@ function renderDetail(){
     </div></div>`;
   }
   
-  // In renderDetail(), update the Photos section
-const photos = (r['Photos'] || '').split(',').filter(Boolean);
-
-// Then in the photo gallery display:
-<div id="photoGallery" style="display:${photos.length > 0 ? 'flex' : 'none'};flex-wrap:wrap;gap:12px;margin-top:12px;">
-  ${photos.map((url, index) => `
-    <div class="photo-thumbnail">
-      <img src="${esc(url)}" onclick="window.open('${esc(url)}', '_blank')" onerror="this.parentElement.style.display='none'">
-      <button type="button" class="remove-btn" data-url="${esc(url)}">×</button>
-      <div class="photo-number">${index + 1}/5</div>
-    </div>
-  `).join('')}
-</div>
+  const photos = (r['Photos'] || '').split(',').filter(Boolean);
   
   let html = `<div class="card">
     <div class="detail-header">
@@ -831,7 +819,7 @@ const photos = (r['Photos'] || '').split(',').filter(Boolean);
       <div id="photoGallery" style="display:${photos.length > 0 ? 'flex' : 'none'};flex-wrap:wrap;gap:12px;margin-top:12px;">
         ${photos.map((url, index) => `
           <div class="photo-thumbnail">
-            <img src="${esc(url)}" onclick="window.open('${esc(url)}', '_blank')">
+            <img src="${esc(url)}" onclick="window.open('${esc(url)}', '_blank')" onerror="this.parentElement.style.display='none'">
             <button type="button" class="remove-btn" data-url="${esc(url)}">×</button>
             <div class="photo-number">${index + 1}/5</div>
           </div>
@@ -1075,7 +1063,6 @@ function exportRecordAsPdf(r){
     finalCharge = basePrice * (1 - discount / 100);
   }
   
-  // Get photos - handle both string and array formats
   let photos = [];
   if (r['Photos']) {
     if (typeof r['Photos'] === 'string') {
@@ -1138,7 +1125,6 @@ function exportRecordAsPdf(r){
     <div class="p-footer">${esc(BUSINESS_NAME)} | More than a haircut - A calm and comfortable grooming experience.</div>
   </div>`;
   
-  // Small delay to ensure images load before printing
   setTimeout(function() {
     window.print();
   }, 500);
@@ -1483,27 +1469,22 @@ function attachHandlers(){
   const newBtn = document.getElementById('newRecordBtn');
   if(newBtn) newBtn.onclick = ()=>{ state.formData = {}; state.editingId = null; state.tab = 'form'; render(); };
 
-  // Search handler - fixed to allow multiple characters
   const searchInput = document.getElementById('searchInput');
   if(searchInput){
     searchInput.oninput = (e)=>{ 
       state.search = e.target.value; 
-      // Re-render only the list, not the whole page
       const app = document.getElementById('app');
       if(state.tab === 'list') {
         app.innerHTML = renderList();
-        // Re-bind click events for record tags
         document.querySelectorAll('.record-tag').forEach(el=>{
           el.onclick = ()=>{ state.detailId = el.dataset.id; state.tab = 'detail'; render(); };
         });
-        // Re-bind search input
         const newSearch = document.getElementById('searchInput');
         if(newSearch) {
           newSearch.oninput = searchInput.oninput;
           newSearch.focus();
           newSearch.selectionStart = newSearch.selectionEnd = newSearch.value.length;
         }
-        // Re-bind new record button
         const newBtnRebind = document.getElementById('newRecordBtn');
         if(newBtnRebind) newBtnRebind.onclick = ()=>{ state.formData = {}; state.editingId = null; state.tab = 'form'; render(); };
       }
@@ -1557,7 +1538,6 @@ function attachHandlers(){
     });
   });
 
-  // Package toggle
   document.querySelectorAll('.package-toggle').forEach(btn=>{
     btn.onclick = ()=>{
       collectFormData();
@@ -1601,53 +1581,52 @@ function attachHandlers(){
   if(ownerInput) ownerInput.onchange = tryAutofillFromHistory;
 
   const saveBtn = document.getElementById('saveFormBtn');
-if(saveBtn) saveBtn.onclick = async ()=>{
-  collectFormData();
-  
-  if(!state.formData['Dog Name']){ 
-    showToast('Please enter a dog name'); 
-    return; 
-  }
-  
-  // Calculate final charges
-  const basePrice = parseFloat(state.formData['Base Price (SGD)']) || 0;
-  const discount = parseFloat(state.formData['Discount (%)']) || 0;
-  const finalCharge = basePrice * (1 - discount / 100);
-  state.formData['Charges (SGD)'] = finalCharge.toFixed(2);
-  
-  // If package is selected, calculate new balance
-  if (state.formData['Has Package'] === 'Yes' && state.formData['Package Balance']) {
-    const currentBalance = parseFloat(state.formData['Package Balance']) || 0;
-    const newBalance = Math.max(0, currentBalance - finalCharge);
-    state.formData['Package Balance'] = newBalance.toFixed(2);
-  }
-  
-  saveBtn.textContent = 'Saving…'; 
-  saveBtn.disabled = true;
-  
-  try{
-    let result;
-    if(state.editingId){
-      await apiUpdate(state.editingId, state.formData);
-      showToast('Record updated');
-      state.detailId = state.editingId;
-    }else{
-      result = await apiCreate(state.formData);
-      state.editingId = result.id;
-      state.detailId = result.id;
-      showToast('Record created!');
+  if(saveBtn) saveBtn.onclick = async ()=>{
+    collectFormData();
+    
+    if(!state.formData['Dog Name']){ 
+      showToast('Please enter a dog name'); 
+      return; 
     }
     
-    await refreshRecords();
-    state.tab = 'detail';
-    render();
-  }catch(err){
-    showToast('Could not save — check connection');
-    console.error(err);
-    saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record'; 
-    saveBtn.disabled = false;
-  }
-};
+    const basePrice = parseFloat(state.formData['Base Price (SGD)']) || 0;
+    const discount = parseFloat(state.formData['Discount (%)']) || 0;
+    const finalCharge = basePrice * (1 - discount / 100);
+    state.formData['Charges (SGD)'] = finalCharge.toFixed(2);
+    
+    if (state.formData['Has Package'] === 'Yes' && state.formData['Package Balance']) {
+      const currentBalance = parseFloat(state.formData['Package Balance']) || 0;
+      const newBalance = Math.max(0, currentBalance - finalCharge);
+      state.formData['Package Balance'] = newBalance.toFixed(2);
+    }
+    
+    saveBtn.textContent = 'Saving…'; 
+    saveBtn.disabled = true;
+    
+    try{
+      let result;
+      if(state.editingId){
+        await apiUpdate(state.editingId, state.formData);
+        showToast('Record updated');
+        state.detailId = state.editingId;
+      }else{
+        result = await apiCreate(state.formData);
+        state.editingId = result.id;
+        state.detailId = result.id;
+        showToast('Record created!');
+      }
+      
+      await refreshRecords();
+      state.tab = 'detail';
+      render();
+    }catch(err){
+      showToast('Could not save — check connection');
+      console.error(err);
+      saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record'; 
+      saveBtn.disabled = false;
+    }
+  };
+}
 
 function collectFormData(){
   const d = state.formData;
