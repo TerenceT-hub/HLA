@@ -1342,8 +1342,8 @@ function getOwnerPackageBalance(ownerName) {
   })
   .then(function(result) {
     console.log('Package balance result:', result);
-    if (result.success && result.packageInfo && result.packageInfo.hasPackage) {
-      return result.packageInfo;
+    if (result.success && result.hasPackage) {
+      return result;
     }
     return null;
   })
