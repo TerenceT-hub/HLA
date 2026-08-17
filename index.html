@@ -897,15 +897,15 @@ function exportRecordAsPdf(r){
 
   var photoHtml = '';
 if (photos.length > 0) {
-  photoHtml = '<h3>Photos</h3><div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:10px;margin-top:10px;">';
+  photoHtml = '<h3>Photos</h3><div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;">';
   photos.forEach(function(url, index) {
     var cleanUrl = url.trim();
     if (cleanUrl && !cleanUrl.startsWith('http')) {
       cleanUrl = 'https://' + cleanUrl;
     }
     var displayUrl = cleanUrl;
-    photoHtml += '<div style="border:1px solid #ddd;border-radius:4px;overflow:hidden;page-break-inside:avoid;background:#f9f9f9;min-height:150px;display:flex;align-items:center;justify-content:center;flex-direction:column;">';
-    photoHtml += '<img src="' + esc(displayUrl) + '" style="width:100%;height:150px;object-fit:cover;" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'<div style=\\\'padding:20px;text-align:center;color:#999;font-size:14px;\\\'>📷 Photo ' + (index + 1) + '</div>\'">';
+    photoHtml += '<div style="width:150px;height:150px;flex:0 0 auto;border:1px solid #ddd;border-radius:4px;overflow:hidden;page-break-inside:avoid;background:#f9f9f9;display:flex;align-items:center;justify-content:center;">';
+    photoHtml += '<img src="' + esc(displayUrl) + '" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'<div style=\\\'padding:20px;text-align:center;color:#999;font-size:14px;\\\'>📷 Photo ' + (index + 1) + '</div>\'">';
     photoHtml += '</div>';
   });
   photoHtml += '</div>';
