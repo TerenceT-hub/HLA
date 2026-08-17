@@ -738,7 +738,19 @@ function renderDetail(){
     </div></div>`;
   }
   
-  const photos = (r['Photos'] || '').split(',').filter(Boolean);
+  // In renderDetail(), update the Photos section
+const photos = (r['Photos'] || '').split(',').filter(Boolean);
+
+// Then in the photo gallery display:
+<div id="photoGallery" style="display:${photos.length > 0 ? 'flex' : 'none'};flex-wrap:wrap;gap:12px;margin-top:12px;">
+  ${photos.map((url, index) => `
+    <div class="photo-thumbnail">
+      <img src="${esc(url)}" onclick="window.open('${esc(url)}', '_blank')" onerror="this.parentElement.style.display='none'">
+      <button type="button" class="remove-btn" data-url="${esc(url)}">×</button>
+      <div class="photo-number">${index + 1}/5</div>
+    </div>
+  `).join('')}
+</div>
   
   let html = `<div class="card">
     <div class="detail-header">
@@ -1063,7 +1075,15 @@ function exportRecordAsPdf(r){
     finalCharge = basePrice * (1 - discount / 100);
   }
   
-  const photos = (r['Photos'] || '').split(',').filter(Boolean);
+  // Get photos - handle both string and array formats
+  let photos = [];
+  if (r['Photos']) {
+    if (typeof r['Photos'] === 'string') {
+      photos = r['Photos'].split(',').filter(Boolean);
+    } else if (Array.isArray(r['Photos'])) {
+      photos = r['Photos'].filter(Boolean);
+    }
+  }
   
   printArea.innerHTML = `<div class="print-doc">
     <div class="p-head">
@@ -1108,16 +1128,20 @@ function exportRecordAsPdf(r){
       <h3>Photos</h3>
       <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:10px;margin-top:10px;">
         ${photos.map(url => `
-          <div style="border:1px solid #ddd;border-radius:4px;overflow:hidden;">
-            <img src="${esc(url)}" style="width:100%;height:150px;object-fit:cover;">
+          <div style="border:1px solid #ddd;border-radius:4px;overflow:hidden;page-break-inside:avoid;">
+            <img src="${esc(url)}" style="width:100%;height:150px;object-fit:cover;" onerror="this.style.display='none'">
           </div>
         `).join('')}
       </div>
-    ` : ''}
+    ` : '<p style="color:#999;font-size:12px;">No photos attached</p>'}
     
     <div class="p-footer">${esc(BUSINESS_NAME)} | More than a haircut - A calm and comfortable grooming experience.</div>
   </div>`;
-  window.print();
+  
+  // Small delay to ensure images load before printing
+  setTimeout(function() {
+    window.print();
+  }, 500);
 }
 
 function findDogHistory(dogName, ownerName, excludeId){
@@ -1577,41 +1601,53 @@ function attachHandlers(){
   if(ownerInput) ownerInput.onchange = tryAutofillFromHistory;
 
   const saveBtn = document.getElementById('saveFormBtn');
-  if(saveBtn) saveBtn.onclick = async ()=>{
-    collectFormData();
-    
-    if(!state.formData['Dog Name']){ 
-      showToast('Please enter a dog name'); 
-      return; 
+if(saveBtn) saveBtn.onclick = async ()=>{
+  collectFormData();
+  
+  if(!state.formData['Dog Name']){ 
+    showToast('Please enter a dog name'); 
+    return; 
+  }
+  
+  // Calculate final charges
+  const basePrice = parseFloat(state.formData['Base Price (SGD)']) || 0;
+  const discount = parseFloat(state.formData['Discount (%)']) || 0;
+  const finalCharge = basePrice * (1 - discount / 100);
+  state.formData['Charges (SGD)'] = finalCharge.toFixed(2);
+  
+  // If package is selected, calculate new balance
+  if (state.formData['Has Package'] === 'Yes' && state.formData['Package Balance']) {
+    const currentBalance = parseFloat(state.formData['Package Balance']) || 0;
+    const newBalance = Math.max(0, currentBalance - finalCharge);
+    state.formData['Package Balance'] = newBalance.toFixed(2);
+  }
+  
+  saveBtn.textContent = 'Saving…'; 
+  saveBtn.disabled = true;
+  
+  try{
+    let result;
+    if(state.editingId){
+      await apiUpdate(state.editingId, state.formData);
+      showToast('Record updated');
+      state.detailId = state.editingId;
+    }else{
+      result = await apiCreate(state.formData);
+      state.editingId = result.id;
+      state.detailId = result.id;
+      showToast('Record created!');
     }
     
-    saveBtn.textContent = 'Saving…'; 
-    saveBtn.disabled = true;
-    
-    try{
-      let result;
-      if(state.editingId){
-        await apiUpdate(state.editingId, state.formData);
-        showToast('Record updated');
-        state.detailId = state.editingId;
-      }else{
-        result = await apiCreate(state.formData);
-        state.editingId = result.id;
-        state.detailId = result.id;
-        showToast('Record created! You can now upload photos.');
-      }
-      
-      await refreshRecords();
-      state.tab = 'detail';
-      render();
-    }catch(err){
-      showToast('Could not save — check connection');
-      console.error(err);
-      saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record'; 
-      saveBtn.disabled = false;
-    }
-  };
-}
+    await refreshRecords();
+    state.tab = 'detail';
+    render();
+  }catch(err){
+    showToast('Could not save — check connection');
+    console.error(err);
+    saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record'; 
+    saveBtn.disabled = false;
+  }
+};
 
 function collectFormData(){
   const d = state.formData;
