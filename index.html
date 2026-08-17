@@ -203,6 +203,8 @@
 
   .revenue-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:0;margin-bottom:24px;overflow:hidden;border-radius:var(--radius);border:1px solid var(--line);}
   @media(max-width:640px){.revenue-summary{grid-template-columns:1fr;}}
+  .revenue-summary.cols-4{grid-template-columns:repeat(4,1fr);}
+  @media(max-width:640px){.revenue-summary.cols-4{grid-template-columns:repeat(2,1fr);}}
   .revenue-summary .stat{background:#fff;padding:22px 24px;}
   .revenue-summary .stat + .stat{border-left:1px solid var(--line);}
   @media(max-width:640px){.revenue-summary .stat + .stat{border-left:none;border-top:1px solid var(--line);}}
@@ -870,34 +872,41 @@ function renderList(){
 
 function renderRevenue(){
   const byMonth = {};
-  let grandCharges = 0, grandCount = 0, grandPackageDraws = 0, grandNewRevenue = 0;
+  let grossTotal = 0, discountTotal = 0, netTotal = 0, packageTotal = 0, cashTotal = 0, grandCount = 0;
 
   state.records.forEach(r => {
+    const basePrice = parseFloat(r['Base Price (SGD)']) || 0;
     const charge = parseFloat(r['Charges (SGD)']) || 0;
+    const gross = basePrice > 0 ? basePrice : charge;
+    const discountAmt = Math.max(0, gross - charge);
     const isPackage = r['Has Package'] === 'Yes';
     const dateStr = r['Date of Grooming'] || '';
     const monthKey = dateStr ? dateStr.slice(0, 7) : 'unspecified'; // YYYY-MM
 
-    if(!byMonth[monthKey]) byMonth[monthKey] = { total: 0, count: 0, packageDraws: 0, newRevenue: 0 };
-    byMonth[monthKey].total += charge;
+    if(!byMonth[monthKey]) byMonth[monthKey] = { count: 0, gross: 0, discount: 0, net: 0, package: 0, cash: 0 };
     byMonth[monthKey].count += 1;
-    if(isPackage){ byMonth[monthKey].packageDraws += charge; }
-    else { byMonth[monthKey].newRevenue += charge; }
+    byMonth[monthKey].gross += gross;
+    byMonth[monthKey].discount += discountAmt;
+    byMonth[monthKey].net += charge;
+    if(isPackage){ byMonth[monthKey].package += charge; } else { byMonth[monthKey].cash += charge; }
 
-    grandCharges += charge;
+    grossTotal += gross;
+    discountTotal += discountAmt;
+    netTotal += charge;
     grandCount += 1;
-    if(isPackage) grandPackageDraws += charge; else grandNewRevenue += charge;
+    if(isPackage) packageTotal += charge; else cashTotal += charge;
   });
 
   const months = Object.keys(byMonth).filter(k => k !== 'unspecified').sort().reverse();
 
-  let html = `<div class="revenue-summary">
-    <div class="stat"><div class="eyebrow">New Revenue</div><div class="num">${grandNewRevenue.toFixed(2)}</div></div>
-    <div class="stat"><div class="eyebrow">Package Draws</div><div class="num clay">${grandPackageDraws.toFixed(2)}</div></div>
-    <div class="stat"><div class="eyebrow">Total Records</div><div class="num">${grandCount}</div></div>
+  let html = `<div class="revenue-summary cols-4">
+    <div class="stat"><div class="eyebrow">Gross Charges</div><div class="num">${grossTotal.toFixed(2)}</div></div>
+    <div class="stat"><div class="eyebrow">Discounts Given</div><div class="num clay">-${discountTotal.toFixed(2)}</div></div>
+    <div class="stat"><div class="eyebrow">Net Received</div><div class="num" style="color:var(--sage);">${netTotal.toFixed(2)}</div></div>
+    <div class="stat"><div class="eyebrow">Total Grooms</div><div class="num">${grandCount}</div></div>
   </div>
   <div style="font-size:12px;color:var(--ink-soft);margin:-14px 0 20px;">
-    "New Revenue" excludes visits paid from an existing package balance, since that money was already collected when the package was purchased.
+    Net Received = Gross Charges − Discounts Given, and includes ${packageTotal.toFixed(2)} drawn from prepaid packages alongside ${cashTotal.toFixed(2)} paid directly.
   </div>`;
 
   if(months.length === 0 && !byMonth['unspecified']){
@@ -908,26 +917,45 @@ function renderRevenue(){
     return html;
   }
 
-  months.forEach(k => {
-    const m = byMonth[k];
-    const label = new Date(k + '-01').toLocaleDateString('en-US', { month:'long', year:'numeric' });
-    html += `<div class="month-row">
-      <div>
-        <div class="m-label">${esc(label)}</div>
-        <div class="m-meta">${m.count} record${m.count===1?'':'s'}${m.packageDraws > 0 ? ' · ' + m.packageDraws.toFixed(2) + ' from packages' : ''}</div>
-      </div>
-      <div class="m-total">${m.newRevenue.toFixed(2)}</div>
-    </div>`;
-  });
+  html += `<div class="card" style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="border-bottom:1px solid var(--line);text-align:left;">
+        <th style="padding:12px 16px;">Month</th>
+        <th style="padding:12px 16px;">Grooms</th>
+        <th style="padding:12px 16px;text-align:right;">Gross</th>
+        <th style="padding:12px 16px;text-align:right;">Discounts</th>
+        <th style="padding:12px 16px;text-align:right;">Net Received</th>
+        <th style="padding:12px 16px;text-align:right;">Via Package</th>
+      </tr></thead>
+      <tbody>`;
 
-  if(byMonth['unspecified']){
-    const m = byMonth['unspecified'];
-    html += `<div class="month-row">
-      <div><div class="m-label">Undated records</div><div class="m-meta">${m.count} record(s) without a grooming date</div></div>
-      <div class="m-total">${m.newRevenue.toFixed(2)}</div>
-    </div>`;
+  function tableRow(label, m){
+    return `<tr style="border-bottom:1px solid var(--line-soft);">
+      <td style="padding:12px 16px;font-weight:500;">${esc(label)}</td>
+      <td style="padding:12px 16px;color:var(--ink-soft);">${m.count}</td>
+      <td style="padding:12px 16px;text-align:right;">${m.gross.toFixed(2)}</td>
+      <td style="padding:12px 16px;text-align:right;color:var(--clay);">${m.discount > 0 ? '-' + m.discount.toFixed(2) : '—'}</td>
+      <td style="padding:12px 16px;text-align:right;font-weight:500;color:var(--sage);">${m.net.toFixed(2)}</td>
+      <td style="padding:12px 16px;text-align:right;color:var(--ink-soft);">${m.package > 0 ? m.package.toFixed(2) : '—'}</td>
+    </tr>`;
   }
 
+  months.forEach(k => {
+    const label = new Date(k + '-01').toLocaleDateString('en-US', { month:'long', year:'numeric' });
+    html += tableRow(label, byMonth[k]);
+  });
+  if(byMonth['unspecified']) html += tableRow('Undated', byMonth['unspecified']);
+
+  html += `<tr style="border-top:2px solid var(--ink);font-weight:600;">
+      <td style="padding:12px 16px;">Total</td>
+      <td style="padding:12px 16px;color:var(--ink-soft);">${grandCount}</td>
+      <td style="padding:12px 16px;text-align:right;">${grossTotal.toFixed(2)}</td>
+      <td style="padding:12px 16px;text-align:right;color:var(--clay);">${discountTotal > 0 ? '-' + discountTotal.toFixed(2) : '—'}</td>
+      <td style="padding:12px 16px;text-align:right;color:var(--sage);">${netTotal.toFixed(2)}</td>
+      <td style="padding:12px 16px;text-align:right;color:var(--ink-soft);">${packageTotal > 0 ? packageTotal.toFixed(2) : '—'}</td>
+    </tr>`;
+
+  html += `</tbody></table></div>`;
   return html;
 }
 
