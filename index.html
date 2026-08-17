@@ -202,9 +202,8 @@
   .brand-mark img.logo{width:68px;height:68px;border-radius:50%;object-fit:cover;flex-shrink:0;}
 
   .revenue-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;padding:0;margin-bottom:24px;overflow:hidden;border-radius:var(--radius);border:1px solid var(--line);}
-  @media(max-width:640px){.revenue-summary{grid-template-columns:1fr;}}
   .revenue-summary.cols-4{grid-template-columns:repeat(4,1fr);}
-  @media(max-width:640px){.revenue-summary.cols-4{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:640px){.revenue-summary{grid-template-columns:1fr;}.revenue-summary.cols-4{grid-template-columns:repeat(2,1fr);}}
   .revenue-summary .stat{background:#fff;padding:22px 24px;}
   .revenue-summary .stat + .stat{border-left:1px solid var(--line);}
   @media(max-width:640px){.revenue-summary .stat + .stat{border-left:none;border-top:1px solid var(--line);}}
@@ -541,7 +540,16 @@ const SHAMPOOS = [
   { name:'Other', desc:'' },
 ];
 
-let state = { tab:'list', records:[], loading:false, search:'', editingId:null, formData:{}, detailId:null };
+let state = { 
+  tab:'list', 
+  records:[], 
+  loading:false, 
+  search:'', 
+  editingId:null, 
+  formData:{}, 
+  detailId:null,
+  revenueView:'monthly'
+};
 
 function initBranding(){
   document.title = BUSINESS_NAME;
@@ -730,7 +738,7 @@ function renderList(){
   return html;
 }
 
-  function renderDetail(){
+function renderDetail(){
   const r = state.records.find(x=>x['Record ID']===state.detailId);
   if(!r) return `<div class="empty-state">Record not found.</div>`;
   function item(label, val){
@@ -763,20 +771,14 @@ function renderList(){
       if (cleanUrl && !cleanUrl.startsWith('http')) {
         cleanUrl = 'https://' + cleanUrl;
       }
-      var isDriveUrl = cleanUrl.includes('drive.google.com') || cleanUrl.includes('googleusercontent.com');
+      // Convert to direct image URL for display
+      var displayUrl = getDirectImageUrl(cleanUrl);
       return `
         <div class="photo-thumbnail" style="position:relative;width:120px;height:120px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:#f5f5f5;display:flex;align-items:center;justify-content:center;">
-          ${isDriveUrl ? `
-            <img src="${esc(cleanUrl)}" 
-                 style="width:100%;height:100%;object-fit:cover;" 
-                 onclick="window.open('${esc(cleanUrl)}', '_blank')" 
-                 onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\\'padding:20px;text-align:center;color:#999;font-size:12px;\\'>📷<br>Photo ${index + 1}</div>'">
-          ` : `
-            <div style="padding:20px;text-align:center;color:#999;font-size:12px;">
-              📷<br>Photo ${index + 1}
-              <div style="font-size:9px;color:#ccc;word-break:break-all;">${cleanUrl.substring(0, 30)}...</div>
-            </div>
-          `}
+          <img src="${esc(displayUrl)}" 
+               style="width:100%;height:100%;object-fit:cover;" 
+               onclick="window.open('${esc(cleanUrl)}', '_blank')" 
+               onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\\'padding:20px;text-align:center;color:#999;font-size:12px;\\'>📷<br>Photo ${index + 1}</div>'">
           <button type="button" class="remove-btn" data-url="${esc(cleanUrl)}" style="position:absolute;top:4px;right:4px;background:var(--clay);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:14px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;z-index:5;">×</button>
           <div class="photo-number" style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.6);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;z-index:5;">${index + 1}/5</div>
         </div>
@@ -871,6 +873,7 @@ function renderList(){
 }
 
 function renderRevenue(){
+  // Build monthly data
   const byMonth = {};
   let grossTotal = 0, discountTotal = 0, netTotal = 0, packageTotal = 0, cashTotal = 0, grandCount = 0;
 
@@ -881,7 +884,7 @@ function renderRevenue(){
     const discountAmt = Math.max(0, gross - charge);
     const isPackage = r['Has Package'] === 'Yes';
     const dateStr = r['Date of Grooming'] || '';
-    const monthKey = dateStr ? dateStr.slice(0, 7) : 'unspecified'; // YYYY-MM
+    const monthKey = dateStr ? dateStr.slice(0, 7) : 'unspecified';
 
     if(!byMonth[monthKey]) byMonth[monthKey] = { count: 0, gross: 0, discount: 0, net: 0, package: 0, cash: 0 };
     byMonth[monthKey].count += 1;
@@ -899,63 +902,157 @@ function renderRevenue(){
 
   const months = Object.keys(byMonth).filter(k => k !== 'unspecified').sort().reverse();
 
-  let html = `<div class="revenue-summary cols-4">
-    <div class="stat"><div class="eyebrow">Gross Charges</div><div class="num">${grossTotal.toFixed(2)}</div></div>
-    <div class="stat"><div class="eyebrow">Discounts Given</div><div class="num clay">-${discountTotal.toFixed(2)}</div></div>
-    <div class="stat"><div class="eyebrow">Net Received</div><div class="num" style="color:var(--sage);">${netTotal.toFixed(2)}</div></div>
-    <div class="stat"><div class="eyebrow">Total Grooms</div><div class="num">${grandCount}</div></div>
-  </div>
-  <div style="font-size:12px;color:var(--ink-soft);margin:-14px 0 20px;">
-    Net Received = Gross Charges − Discounts Given, and includes ${packageTotal.toFixed(2)} drawn from prepaid packages alongside ${cashTotal.toFixed(2)} paid directly.
+  // Build owner data
+  const ownerMap = {};
+  state.records.forEach(function(r) {
+    var owner = r['Owner Name'] || 'Unknown';
+    if (!ownerMap[owner]) {
+      ownerMap[owner] = {
+        gross: 0,
+        discount: 0,
+        net: 0,
+        packageUsed: 0,
+        cashPaid: 0,
+        count: 0,
+        packageBalance: 0,
+        packageType: ''
+      };
+    }
+    var base = parseFloat(r['Base Price (SGD)']) || 0;
+    var charge = parseFloat(r['Charges (SGD)']) || 0;
+    var gross = base > 0 ? base : charge;
+    var discountAmt = Math.max(0, gross - charge);
+    var isPackage = r['Has Package'] === 'Yes';
+    
+    ownerMap[owner].gross += gross;
+    ownerMap[owner].discount += discountAmt;
+    ownerMap[owner].net += charge;
+    ownerMap[owner].count += 1;
+    if (isPackage) {
+      ownerMap[owner].packageUsed += charge;
+    } else {
+      ownerMap[owner].cashPaid += charge;
+    }
+    if (isPackage) {
+      ownerMap[owner].packageBalance = parseFloat(r['Package Balance']) || 0;
+      ownerMap[owner].packageType = r['Package Type'] || '';
+    }
+  });
+
+  var owners = Object.keys(ownerMap).sort();
+
+  // --- START BUILDING HTML ---
+  let html = '';
+
+  // Toggle Buttons
+  html += `<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+    <button class="btn ${state.revenueView === 'monthly' ? '' : 'secondary'}" id="viewMonthlyBtn">📊 Monthly</button>
+    <button class="btn ${state.revenueView === 'owner' ? '' : 'secondary'}" id="viewOwnerBtn">👤 By Owner</button>
   </div>`;
 
-  if(months.length === 0 && !byMonth['unspecified']){
-    html += `<div class="card empty-state"><div class="stamp">犬</div>
-      <div style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:6px;">No revenue yet</div>
-      <div>Charges you record against each groom will roll up here by month.</div>
+  // Monthly View
+  if (state.revenueView === 'monthly') {
+    html += `<div class="revenue-summary cols-4">
+      <div class="stat"><div class="eyebrow">Gross Charges</div><div class="num">${grossTotal.toFixed(2)}</div></div>
+      <div class="stat"><div class="eyebrow">Discounts Given</div><div class="num clay">-${discountTotal.toFixed(2)}</div></div>
+      <div class="stat"><div class="eyebrow">Net Received</div><div class="num" style="color:var(--sage);">${netTotal.toFixed(2)}</div></div>
+      <div class="stat"><div class="eyebrow">Total Grooms</div><div class="num">${grandCount}</div></div>
+    </div>
+    <div style="font-size:12px;color:var(--ink-soft);margin:-14px 0 20px;">
+      Net Received = Gross Charges − Discounts Given, and includes ${packageTotal.toFixed(2)} drawn from prepaid packages alongside ${cashTotal.toFixed(2)} paid directly.
     </div>`;
-    return html;
+
+    if(months.length === 0 && !byMonth['unspecified']){
+      html += `<div class="card empty-state"><div class="stamp">犬</div>
+        <div style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:6px;">No revenue yet</div>
+        <div>Charges you record against each groom will roll up here by month.</div>
+      </div>`;
+    } else {
+      html += `<div class="card" style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr style="border-bottom:1px solid var(--line);text-align:left;">
+            <th style="padding:12px 16px;">Month</th>
+            <th style="padding:12px 16px;">Grooms</th>
+            <th style="padding:12px 16px;text-align:right;">Gross</th>
+            <th style="padding:12px 16px;text-align:right;">Discounts</th>
+            <th style="padding:12px 16px;text-align:right;">Net Received</th>
+            <th style="padding:12px 16px;text-align:right;">Via Package</th>
+          </tr></thead>
+          <tbody>`;
+
+      function tableRow(label, m){
+        return `<tr style="border-bottom:1px solid var(--line-soft);">
+          <td style="padding:12px 16px;font-weight:500;">${esc(label)}</td>
+          <td style="padding:12px 16px;color:var(--ink-soft);">${m.count}</td>
+          <td style="padding:12px 16px;text-align:right;">${m.gross.toFixed(2)}</td>
+          <td style="padding:12px 16px;text-align:right;color:var(--clay);">${m.discount > 0 ? '-' + m.discount.toFixed(2) : '—'}</td>
+          <td style="padding:12px 16px;text-align:right;font-weight:500;color:var(--sage);">${m.net.toFixed(2)}</td>
+          <td style="padding:12px 16px;text-align:right;color:var(--ink-soft);">${m.package > 0 ? m.package.toFixed(2) : '—'}</td>
+        </tr>`;
+      }
+
+      months.forEach(k => {
+        const label = new Date(k + '-01').toLocaleDateString('en-US', { month:'long', year:'numeric' });
+        html += tableRow(label, byMonth[k]);
+      });
+      if(byMonth['unspecified']) html += tableRow('Undated', byMonth['unspecified']);
+
+      html += `<tr style="border-top:2px solid var(--ink);font-weight:600;">
+          <td style="padding:12px 16px;">Total</td>
+          <td style="padding:12px 16px;color:var(--ink-soft);">${grandCount}</td>
+          <td style="padding:12px 16px;text-align:right;">${grossTotal.toFixed(2)}</td>
+          <td style="padding:12px 16px;text-align:right;color:var(--clay);">${discountTotal > 0 ? '-' + discountTotal.toFixed(2) : '—'}</td>
+          <td style="padding:12px 16px;text-align:right;color:var(--sage);">${netTotal.toFixed(2)}</td>
+          <td style="padding:12px 16px;text-align:right;color:var(--ink-soft);">${packageTotal > 0 ? packageTotal.toFixed(2) : '—'}</td>
+        </tr>`;
+
+      html += `</tbody></table></div>`;
+    }
   }
 
-  html += `<div class="card" style="overflow-x:auto;">
-    <table style="width:100%;border-collapse:collapse;font-size:13px;">
-      <thead><tr style="border-bottom:1px solid var(--line);text-align:left;">
-        <th style="padding:12px 16px;">Month</th>
-        <th style="padding:12px 16px;">Grooms</th>
-        <th style="padding:12px 16px;text-align:right;">Gross</th>
-        <th style="padding:12px 16px;text-align:right;">Discounts</th>
-        <th style="padding:12px 16px;text-align:right;">Net Received</th>
-        <th style="padding:12px 16px;text-align:right;">Via Package</th>
-      </tr></thead>
-      <tbody>`;
+  // Owner View
+  if (state.revenueView === 'owner') {
+    if (owners.length === 0) {
+      html += `<div class="card empty-state"><div class="stamp">犬</div>
+        <div style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:6px;">No customer data yet</div>
+        <div>Records will appear here once you have grooming history.</div>
+      </div>`;
+    } else {
+      html += `<div class="card" style="overflow-x:auto;">
+        <h3 style="padding:16px 20px 0;font-family:'Shippori Mincho',serif;font-size:16px;">Customer Revenue Summary</h3>
+        <table style="width:100%;border-collapse:collapse;font-size:13px;">
+          <thead><tr style="border-bottom:1px solid var(--line);text-align:left;">
+            <th style="padding:12px 16px;">Owner</th>
+            <th style="padding:12px 16px;text-align:right;">Grooms</th>
+            <th style="padding:12px 16px;text-align:right;">Gross</th>
+            <th style="padding:12px 16px;text-align:right;">Discounts</th>
+            <th style="padding:12px 16px;text-align:right;">Net</th>
+            <th style="padding:12px 16px;text-align:right;">Package Used</th>
+            <th style="padding:12px 16px;text-align:right;">Cash Paid</th>
+            <th style="padding:12px 16px;text-align:right;">Balance Left</th>
+            <th style="padding:12px 16px;">Package Type</th>
+          </tr></thead>
+          <tbody>`;
 
-  function tableRow(label, m){
-    return `<tr style="border-bottom:1px solid var(--line-soft);">
-      <td style="padding:12px 16px;font-weight:500;">${esc(label)}</td>
-      <td style="padding:12px 16px;color:var(--ink-soft);">${m.count}</td>
-      <td style="padding:12px 16px;text-align:right;">${m.gross.toFixed(2)}</td>
-      <td style="padding:12px 16px;text-align:right;color:var(--clay);">${m.discount > 0 ? '-' + m.discount.toFixed(2) : '—'}</td>
-      <td style="padding:12px 16px;text-align:right;font-weight:500;color:var(--sage);">${m.net.toFixed(2)}</td>
-      <td style="padding:12px 16px;text-align:right;color:var(--ink-soft);">${m.package > 0 ? m.package.toFixed(2) : '—'}</td>
-    </tr>`;
+      owners.forEach(function(owner) {
+        var data = ownerMap[owner];
+        html += `<tr style="border-bottom:1px solid var(--line-soft);">
+          <td style="padding:12px 16px;font-weight:500;">${esc(owner)}</td>
+          <td style="padding:12px 16px;text-align:right;">${data.count}</td>
+          <td style="padding:12px 16px;text-align:right;">${data.gross.toFixed(2)}</td>
+          <td style="padding:12px 16px;text-align:right;color:var(--clay);">${data.discount > 0 ? '-' + data.discount.toFixed(2) : '—'}</td>
+          <td style="padding:12px 16px;text-align:right;font-weight:500;color:var(--sage);">${data.net.toFixed(2)}</td>
+          <td style="padding:12px 16px;text-align:right;color:var(--ink-soft);">${data.packageUsed > 0 ? data.packageUsed.toFixed(2) : '—'}</td>
+          <td style="padding:12px 16px;text-align:right;">${data.cashPaid > 0 ? data.cashPaid.toFixed(2) : '—'}</td>
+          <td style="padding:12px 16px;text-align:right;font-weight:600;color:${data.packageBalance > 0 ? 'var(--sage)' : 'var(--clay)'};">${data.packageBalance.toFixed(2)}</td>
+          <td style="padding:12px 16px;font-size:12px;color:var(--ink-soft);">${esc(data.packageType) || '—'}</td>
+        </tr>`;
+      });
+
+      html += `</tbody></table></div>`;
+    }
   }
 
-  months.forEach(k => {
-    const label = new Date(k + '-01').toLocaleDateString('en-US', { month:'long', year:'numeric' });
-    html += tableRow(label, byMonth[k]);
-  });
-  if(byMonth['unspecified']) html += tableRow('Undated', byMonth['unspecified']);
-
-  html += `<tr style="border-top:2px solid var(--ink);font-weight:600;">
-      <td style="padding:12px 16px;">Total</td>
-      <td style="padding:12px 16px;color:var(--ink-soft);">${grandCount}</td>
-      <td style="padding:12px 16px;text-align:right;">${grossTotal.toFixed(2)}</td>
-      <td style="padding:12px 16px;text-align:right;color:var(--clay);">${discountTotal > 0 ? '-' + discountTotal.toFixed(2) : '—'}</td>
-      <td style="padding:12px 16px;text-align:right;color:var(--sage);">${netTotal.toFixed(2)}</td>
-      <td style="padding:12px 16px;text-align:right;color:var(--ink-soft);">${packageTotal > 0 ? packageTotal.toFixed(2) : '—'}</td>
-    </tr>`;
-
-  html += `</tbody></table></div>`;
   return html;
 }
 
@@ -987,22 +1084,22 @@ function exportRecordAsPdf(r){
   }
 
   var photoHtml = '';
-if (photos.length > 0) {
-  photoHtml = '<h3>Photos</h3><div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;">';
-  photos.forEach(function(url, index) {
-    var cleanUrl = url.trim();
-    if (cleanUrl && !cleanUrl.startsWith('http')) {
-      cleanUrl = 'https://' + cleanUrl;
-    }
-    var displayUrl = cleanUrl;
-    photoHtml += '<div style="width:150px;height:150px;flex:0 0 auto;border:1px solid #ddd;border-radius:4px;overflow:hidden;page-break-inside:avoid;background:#f9f9f9;display:flex;align-items:center;justify-content:center;">';
-    photoHtml += '<img src="' + esc(displayUrl) + '" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'<div style=\\\'padding:20px;text-align:center;color:#999;font-size:14px;\\\'>📷 Photo ' + (index + 1) + '</div>\'">';
+  if (photos.length > 0) {
+    photoHtml = '<h3>Photos</h3><div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:10px;margin-top:10px;">';
+    photos.forEach(function(url, index) {
+      var cleanUrl = url.trim();
+      if (cleanUrl && !cleanUrl.startsWith('http')) {
+        cleanUrl = 'https://' + cleanUrl;
+      }
+      var displayUrl = getDirectImageUrl(cleanUrl);
+      photoHtml += '<div style="border:1px solid #ddd;border-radius:4px;overflow:hidden;page-break-inside:avoid;background:#f9f9f9;min-height:150px;display:flex;align-items:center;justify-content:center;">';
+      photoHtml += '<img src="' + esc(displayUrl) + '" style="width:100%;height:150px;object-fit:cover;" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'<div style=\\\'padding:20px;text-align:center;color:#999;font-size:14px;\\\'>📷 Photo ' + (index + 1) + '</div>\'">';
+      photoHtml += '</div>';
+    });
     photoHtml += '</div>';
-  });
-  photoHtml += '</div>';
-} else {
-  photoHtml = '<p style="color:#999;font-size:12px;">No photos attached</p>';
-}
+  } else {
+    photoHtml = '<p style="color:#999;font-size:12px;">No photos attached</p>';
+  }
   
   printArea.innerHTML = '<div class="print-doc">' +
     '<div class="p-head">' +
@@ -1118,7 +1215,7 @@ function getDirectImageUrl(url) {
     return 'https://drive.google.com/uc?export=view&id=' + match[0];
   }
   return url;
-} 
+}
 
 function renderForm(){
   const d = state.formData;
@@ -1616,62 +1713,79 @@ function attachHandlers(){
   }
 
   const saveBtn = document.getElementById('saveFormBtn');
-if(saveBtn) saveBtn.onclick = async ()=>{
-  collectFormData();
-  
-  if(!state.formData['Dog Name']){ 
-    showToast('Please enter a dog name'); 
-    return; 
-  }
-  
-  // Calculate final charges
-  const basePrice = parseFloat(state.formData['Base Price (SGD)']) || 0;
-  const discount = parseFloat(state.formData['Discount (%)']) || 0;
-  const finalCharge = basePrice * (1 - discount / 100);
-  state.formData['Charges (SGD)'] = finalCharge.toFixed(2);
-  
-  // Check package balance if package is selected — no blocking dialog; the
-  // shortfall is already shown as an inline warning above before Save is clicked.
-  if (state.formData['Has Package'] === 'Yes') {
-    const currentBalance = parseFloat(state.formData['Package Balance']) || 0;
-
-    if (currentBalance < finalCharge) {
-      const shortAmount = (finalCharge - currentBalance).toFixed(2);
-      state.formData['Package Balance'] = '0.00';
-      showToast('Package balance depleted — ' + shortAmount + ' to collect separately');
-    } else {
-      const newBalance = currentBalance - finalCharge;
-      state.formData['Package Balance'] = newBalance.toFixed(2);
-      showToast('Package balance updated: ' + newBalance.toFixed(2));
-    }
-  }
-  
-  saveBtn.textContent = 'Saving…'; 
-  saveBtn.disabled = true;
-  
-  try{
-    let result;
-    if(state.editingId){
-      await apiUpdate(state.editingId, state.formData);
-      showToast('Record updated');
-      state.detailId = state.editingId;
-    }else{
-      result = await apiCreate(state.formData);
-      state.editingId = result.id;
-      state.detailId = result.id;
-      showToast('Record created!');
+  if(saveBtn) saveBtn.onclick = async ()=>{
+    collectFormData();
+    
+    if(!state.formData['Dog Name']){ 
+      showToast('Please enter a dog name'); 
+      return; 
     }
     
-    await refreshRecords();
-    state.tab = 'detail';
-    render();
-  }catch(err){
-    showToast('Could not save — check connection');
-    console.error(err);
-    saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record'; 
-    saveBtn.disabled = false;
+    // Calculate final charges
+    const basePrice = parseFloat(state.formData['Base Price (SGD)']) || 0;
+    const discount = parseFloat(state.formData['Discount (%)']) || 0;
+    const finalCharge = basePrice * (1 - discount / 100);
+    state.formData['Charges (SGD)'] = finalCharge.toFixed(2);
+    
+    // Check package balance if package is selected
+    if (state.formData['Has Package'] === 'Yes') {
+      const currentBalance = parseFloat(state.formData['Package Balance']) || 0;
+
+      if (currentBalance < finalCharge) {
+        const shortAmount = (finalCharge - currentBalance).toFixed(2);
+        state.formData['Package Balance'] = '0.00';
+        showToast('Package balance depleted — ' + shortAmount + ' to collect separately');
+      } else {
+        const newBalance = currentBalance - finalCharge;
+        state.formData['Package Balance'] = newBalance.toFixed(2);
+        showToast('Package balance updated: ' + newBalance.toFixed(2));
+      }
+    }
+    
+    saveBtn.textContent = 'Saving…'; 
+    saveBtn.disabled = true;
+    
+    try{
+      let result;
+      if(state.editingId){
+        await apiUpdate(state.editingId, state.formData);
+        showToast('Record updated');
+        state.detailId = state.editingId;
+      }else{
+        result = await apiCreate(state.formData);
+        state.editingId = result.id;
+        state.detailId = result.id;
+        showToast('Record created!');
+      }
+      
+      await refreshRecords();
+      state.tab = 'detail';
+      render();
+    }catch(err){
+      showToast('Could not save — check connection');
+      console.error(err);
+      saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record'; 
+      saveBtn.disabled = false;
+    }
+  };
+
+  // Revenue view toggle
+  const viewMonthlyBtn = document.getElementById('viewMonthlyBtn');
+  const viewOwnerBtn = document.getElementById('viewOwnerBtn');
+
+  if (viewMonthlyBtn) {
+    viewMonthlyBtn.onclick = function() {
+      state.revenueView = 'monthly';
+      render();
+    };
   }
-};
+
+  if (viewOwnerBtn) {
+    viewOwnerBtn.onclick = function() {
+      state.revenueView = 'owner';
+      render();
+    };
+  }
 }
 
 function collectFormData(){
