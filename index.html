@@ -606,26 +606,37 @@ async function uploadPhotos(recordId, files) {
   const uploadedUrls = [];
   for (let i = 0; i < files.length; i++) {
     try {
+      // Compress the image
       const dataUrl = await fileToCompressedDataUrl(files[i]);
       const base64Data = dataUrl.substring(dataUrl.indexOf(',') + 1);
+      
+      // Get file extension
+      const fileExt = files[i].name.split('.').pop().toLowerCase() || 'jpg';
+      
       const response = await fetch(APPS_SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify({
           action: 'uploadPhoto',
           recordId: recordId,
           mimeType: 'image/jpeg',
-          fileName: (files[i].name || `photo_${i + 1}`).replace(/\.[^.]+$/, '') + '.jpg',
+          fileName: (files[i].name || 'photo').replace(/\.[^.]+$/, '') + '.' + fileExt,
           data: base64Data
         })
       });
+      
       const result = await response.json();
+      console.log('Upload result:', result); // Debug log
+      
       if (!result.success) {
-        return { success: false, error: result.error || `Failed on photo ${i + 1} of ${files.length}` };
+        return { success: false, error: result.error || 'Upload failed' };
       }
-      if (result.url) uploadedUrls.push(result.url);
+      if (result.url) {
+        uploadedUrls.push(result.url);
+        console.log('Uploaded URL:', result.url); // Debug log
+      }
     } catch (err) {
       console.error('Upload error:', err);
-      return { success: false, error: err.message || `Failed on photo ${i + 1} of ${files.length}` };
+      return { success: false, error: err.message || 'Upload failed' };
     }
   }
   return { success: true, urls: uploadedUrls };
@@ -738,94 +749,30 @@ function renderDetail(){
     </div></div>`;
   }
   
-  const photos = (r['Photos'] || '').split(',').filter(Boolean);
-  
-  let html = `<div class="card">
-    <div class="detail-header">
-      <div>
-        <h2>${esc(r['Dog Name']||'Unnamed')}</h2>
-        <div class="sub">${esc(r['Owner Name']||'')} · Groomed ${esc(r['Date of Grooming']||'—')}</div>
+  // In renderDetail(), update the photos section
+const photos = (r['Photos'] || '').split(',').map(function(url) { 
+  return url.trim(); 
+}).filter(Boolean);
+
+// Then the photo gallery:
+<div id="photoGallery" style="display:${photos.length > 0 ? 'flex' : 'none'};flex-wrap:wrap;gap:12px;margin-top:12px;">
+  ${photos.map((url, index) => {
+    // Make sure the URL is valid and starts with https
+    var cleanUrl = url.trim();
+    if (cleanUrl && !cleanUrl.startsWith('http')) {
+      cleanUrl = 'https://' + cleanUrl;
+    }
+    return `
+      <div class="photo-thumbnail" style="position:relative;width:120px;height:120px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:#f5f5f5;display:flex;align-items:center;justify-content:center;">
+        <img src="${esc(cleanUrl)}" 
+             style="width:100%;height:100%;object-fit:cover;" 
+             onclick="window.open('${esc(cleanUrl)}', '_blank')" 
+             onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\\'padding:20px;text-align:center;color:#999;font-size:12px;\\'>📷<br>Photo ${index + 1}</div>'">
+        <button type="button" class="remove-btn" data-url="${esc(cleanUrl)}" style="position:absolute;top:4px;right:4px;background:var(--clay);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:14px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;z-index:5;">×</button>
+        <div class="photo-number" style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.6);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;z-index:5;">${index + 1}/5</div>
       </div>
-      <div class="detail-actions">
-        <button class="btn secondary" id="exportPdfBtn">Export as PDF</button>
-        <button class="btn secondary" id="editBtn">Edit</button>
-        <button class="btn danger" id="deleteBtn">Delete</button>
-      </div>
-    </div>
-    <div class="detail-grid">
-      ${item('Breed', r['Breed'])}
-      ${tagItem('Gender', 'Gender', GENDER.options)}
-      ${item('Weight (kg)', r['Weight (kg)'])}
-      ${tagItem('Service Required', 'Service Required', SERVICE.options)}
-      ${item('Base Price (SGD)', r['Base Price (SGD)'] ? r['Base Price (SGD)'] : (r['Charges (SGD)'] ? r['Charges (SGD)'] : ''))}
-      ${item('Discount', r['Discount (%)'] ? r['Discount (%)'] + '%' : '')}
-      ${item('Discount Notes', r['Discount Notes'] || '')}
-      ${item('Final Charges (SGD)', r['Charges (SGD)'] ? r['Charges (SGD)'] : '')}
-      ${item('Has Package', r['Has Package'] || 'No')}
-      ${item('Package Type', r['Package Type'] || '')}
-      ${item('Package Balance (SGD)', r['Package Balance'] ? r['Package Balance'] : '')}
-    </div>
-    <div class="section" style="padding-top:6px;">
-      <div class="section-title"><span class="num">01</span><h2>Pre-Assessment</h2></div>
-      <div class="detail-grid">
-        ${PRE_ASSESSMENT.map(cat => `
-          ${tagItem(cat.label, cat.key, cat.options)}
-          ${r[cat.key+' Notes'] ? `<div class="detail-item"><label>${esc(cat.label)} Notes</label><div class="val">${esc(r[cat.key+' Notes'])}</div></div>` : ''}
-        `).join('')}
-        ${tagItem('Mats', 'Mats', MATS.options)}
-      </div>
-    </div>
-    <div class="section">
-      <div class="section-title"><span class="num">02</span><h2>Temperament &amp; Notes</h2></div>
-      <div class="detail-grid">
-        ${tagItem('Temperament', 'Temperament', TEMPERAMENT.options)}
-        ${item('Shampoo Used', r['Shampoo Used'])}
-      </div>
-      ${item('Specific Request / Style Notes', r['Style Notes'])}
-      ${item('Additional Notes', r['Additional Notes'])}
-    </div>
-    ${(() => {
-      const history = findDogHistory(r['Dog Name'], r['Owner Name'], r['Record ID']);
-      if(history.length === 0) return '';
-      return `<div class="section" style="padding-top:6px;">
-        <div class="section-title"><span class="num">03</span><h2>Visit History</h2></div>
-        ${history.map(h=>`
-          <div class="record-tag history-row" data-id="${esc(h['Record ID'])}" style="margin-bottom:8px;">
-            <span class="punch"></span>
-            <div class="info">
-              <div class="dog">${esc(h['Service Required']||'Visit')}</div>
-              <div class="meta">${esc(h['Temperament']||'—')}${h['Style Notes'] ? ' · '+esc(h['Style Notes']) : ''}</div>
-            </div>
-            <div class="date">${esc(h['Date of Grooming']||'')}${h['Charges (SGD)'] ? +esc(h['Charges (SGD)']) : ''}</div>
-          </div>`).join('')}
-      </div>`;
-    })()}
-    <div class="section">
-      <div class="section-title"><span class="num">04</span><h2>Photos</h2></div>
-      <div style="background:var(--sage-soft);border:1px solid var(--sage);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;">
-        <div style="font-size:13px;color:var(--sage);">
-          💡 <strong>Note:</strong> Please save the record first before uploading photos. Maximum 5 photos.
-        </div>
-      </div>
-      
-      <div class="photo-upload-area" id="photoUploadArea">
-        <div style="font-size:32px;">📷</div>
-        <div style="font-size:13px;color:var(--ink-soft);margin:8px 0;">Click or drag photos here</div>
-        <div style="font-size:11px;color:var(--ink-soft);">Maximum 5 photos (JPG, PNG, GIF)</div>
-        <div class="upload-progress">Uploading...</div>
-        <input type="file" id="photoInput" multiple accept="image/*" style="display:none;">
-      </div>
-      
-      <div id="photoGallery" style="display:${photos.length > 0 ? 'flex' : 'none'};flex-wrap:wrap;gap:12px;margin-top:12px;">
-  ${photos.map((url, index) => `
-    <div class="photo-thumbnail">
-      <img src="${esc(url)}?t=${new Date().getTime()}" 
-           onclick="window.open('${esc(url)}', '_blank')" 
-           onerror="this.parentElement.style.display='none'">
-      <button type="button" class="remove-btn" data-url="${esc(url)}">×</button>
-      <div class="photo-number">${index + 1}/5</div>
-    </div>
-  `).join('')}
+    `;
+  }).join('')}
 </div>
       ${photos.length === 0 ? `<div style="text-align:center;color:var(--ink-soft);font-size:13px;padding:20px 0;">No photos uploaded yet</div>` : ''}
       <div style="font-size:11px;color:var(--ink-soft);margin-top:8px;">${photos.length}/5 photos used</div>
@@ -1065,28 +1012,33 @@ function exportRecordAsPdf(r){
     finalCharge = basePrice * (1 - discount / 100);
   }
   
-  var photos = [];
-  if (r['Photos']) {
-    if (typeof r['Photos'] === 'string') {
-      photos = r['Photos'].split(',').filter(Boolean);
-    } else if (Array.isArray(r['Photos'])) {
-      photos = r['Photos'].filter(Boolean);
+  // Get photos - handle both string and array formats
+var photos = [];
+if (r['Photos']) {
+  if (typeof r['Photos'] === 'string') {
+    photos = r['Photos'].split(',').map(function(url) { return url.trim(); }).filter(Boolean);
+  } else if (Array.isArray(r['Photos'])) {
+    photos = r['Photos'].filter(Boolean);
+  }
+}
+
+// Create photo HTML with better error handling
+var photoHtml = '';
+if (photos.length > 0) {
+  photoHtml = '<h3>Photos</h3><div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:10px;margin-top:10px;">';
+  photos.forEach(function(url, index) {
+    var cleanUrl = url.trim();
+    if (cleanUrl && !cleanUrl.startsWith('http')) {
+      cleanUrl = 'https://' + cleanUrl;
     }
-  }
-  
-  // Create photo HTML with better error handling
-  var photoHtml = '';
-  if (photos.length > 0) {
-    photoHtml = '<h3>Photos</h3><div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:10px;margin-top:10px;">';
-    photos.forEach(function(url) {
-      photoHtml += '<div style="border:1px solid #ddd;border-radius:4px;overflow:hidden;page-break-inside:avoid;background:#f9f9f9;min-height:150px;display:flex;align-items:center;justify-content:center;">';
-      photoHtml += '<img src="' + esc(url) + '" style="width:100%;height:150px;object-fit:cover;" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'<div style=\\\'padding:20px;text-align:center;color:#999;\\\'>📷 Photo unavailable</div>\'">';
-      photoHtml += '</div>';
-    });
+    photoHtml += '<div style="border:1px solid #ddd;border-radius:4px;overflow:hidden;page-break-inside:avoid;background:#f9f9f9;min-height:150px;display:flex;align-items:center;justify-content:center;flex-direction:column;">';
+    photoHtml += '<img src="' + esc(cleanUrl) + '" style="width:100%;height:150px;object-fit:cover;" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'<div style=\\\'padding:20px;text-align:center;color:#999;font-size:14px;\\\'>📷 Photo ' + (index + 1) + '</div>\'">';
     photoHtml += '</div>';
-  } else {
-    photoHtml = '<p style="color:#999;font-size:12px;">No photos attached</p>';
-  }
+  });
+  photoHtml += '</div>';
+} else {
+  photoHtml = '<p style="color:#999;font-size:12px;">No photos attached</p>';
+}
   
   printArea.innerHTML = '<div class="print-doc">' +
     '<div class="p-head">' +
