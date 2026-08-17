@@ -1561,13 +1561,27 @@ function attachHandlers(){
   });
 
   document.querySelectorAll('.package-toggle').forEach(btn=>{
-    btn.onclick = ()=>{
-      collectFormData();
-      const value = btn.dataset.package;
-      state.formData['Has Package'] = value;
-      render();
-    };
-  });
+  btn.onclick = ()=>{
+    collectFormData();
+    const value = btn.dataset.package;
+    state.formData['Has Package'] = value;
+    
+    // If switching to "Yes", try to fetch the owner's package balance
+    if (value === 'Yes' && state.formData['Owner Name']) {
+      getOwnerPackageBalance(state.formData['Owner Name']).then(pkgInfo => {
+        if (pkgInfo && pkgInfo.hasPackage) {
+          state.formData['Package Balance'] = pkgInfo.balance.toFixed(2);
+          state.formData['Package Type'] = pkgInfo.packageType || '';
+          render();
+        } else {
+          // If no package found, prompt user to enter balance manually
+          showToast('No existing package found. Please enter balance manually.');
+        }
+      });
+    }
+    render();
+  };
+});
 
   document.querySelectorAll('.shampoo-option').forEach(opt=>{
     opt.onclick = ()=>{
@@ -1587,28 +1601,31 @@ function attachHandlers(){
   if(cancelBtn) cancelBtn.onclick = ()=>{ state.tab = state.editingId ? 'detail' : 'list'; render(); };
 
   function tryAutofillFromHistory(){
-    collectFormData();
-    const history = findDogHistory(state.formData['Dog Name'], state.formData['Owner Name'], state.editingId);
-    if(history.length){
-      const latest = history[0];
-      if(!state.formData['Owner Name']) state.formData['Owner Name'] = latest['Owner Name'];
-      if(!state.formData['Breed']) state.formData['Breed'] = latest['Breed'];
-      if(!state.formData['Gender']) state.formData['Gender'] = latest['Gender'];
-    }
-    
-    // Also fetch package balance for this owner
-    if (state.formData['Owner Name']) {
-      getOwnerPackageBalance(state.formData['Owner Name']).then(pkgInfo => {
-        if (pkgInfo && pkgInfo.hasPackage) {
-          state.formData['Has Package'] = 'Yes';
-          state.formData['Package Type'] = pkgInfo.packageType || '';
-          state.formData['Package Balance'] = pkgInfo.balance.toFixed(2);
-          render();
-        }
-      });
-    }
-    render();
+  collectFormData();
+  const history = findDogHistory(state.formData['Dog Name'], state.formData['Owner Name'], state.editingId);
+  if(history.length){
+    const latest = history[0];
+    if(!state.formData['Owner Name']) state.formData['Owner Name'] = latest['Owner Name'];
+    if(!state.formData['Breed']) state.formData['Breed'] = latest['Breed'];
+    if(!state.formData['Gender']) state.formData['Gender'] = latest['Gender'];
   }
+  
+  // Also fetch package balance for this owner
+  if (state.formData['Owner Name']) {
+    getOwnerPackageBalance(state.formData['Owner Name']).then(pkgInfo => {
+      if (pkgInfo && pkgInfo.hasPackage) {
+        state.formData['Has Package'] = 'Yes';
+        state.formData['Package Type'] = pkgInfo.packageType || '';
+        state.formData['Package Balance'] = pkgInfo.balance.toFixed(2);
+      } else {
+        // If no package found, set defaults but don't force "No"
+        // Let the user decide
+      }
+      render();
+    });
+  }
+  render();
+}
 
   const dogInput = document.getElementById('f_DogName');
   const ownerInput = document.getElementById('f_OwnerName');
@@ -1616,72 +1633,76 @@ function attachHandlers(){
   if(ownerInput) ownerInput.onchange = tryAutofillFromHistory;
 
   const saveBtn = document.getElementById('saveFormBtn');
-  if(saveBtn) saveBtn.onclick = async ()=>{
-    collectFormData();
-    
-    if(!state.formData['Dog Name']){ 
-      showToast('Please enter a dog name'); 
-      return; 
-    }
-    
-    // Calculate final charges
-    const basePrice = parseFloat(state.formData['Base Price (SGD)']) || 0;
-    const discount = parseFloat(state.formData['Discount (%)']) || 0;
-    const finalCharge = basePrice * (1 - discount / 100);
-    state.formData['Charges (SGD)'] = finalCharge.toFixed(2);
-    
-    // Check package balance if package is selected
-    if (state.formData['Has Package'] === 'Yes') {
-      const currentBalance = parseFloat(state.formData['Package Balance']) || 0;
-      if (currentBalance < finalCharge) {
-        const shortAmount = (finalCharge - currentBalance).toFixed(2);
-        const confirmSave = confirm(
-          `⚠️ INSUFFICIENT PACKAGE BALANCE!\n\n` +
-          `Current Balance: ${currentBalance.toFixed(2)}\n` +
-          `Total Charges: ${finalCharge.toFixed(2)}\n` +
-          `Short by: ${shortAmount}\n\n` +
-          `The package balance will go to 0.00 and the remaining ${shortAmount} will need to be paid separately.\n\n` +
-          `Do you want to continue?`
-        );
-        if (!confirmSave) {
-          saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record';
-          saveBtn.disabled = false;
-          return;
-        }
-        // Set balance to 0 if insufficient
-        state.formData['Package Balance'] = '0.00';
-      } else {
-        const newBalance = currentBalance - finalCharge;
-        state.formData['Package Balance'] = newBalance.toFixed(2);
+if(saveBtn) saveBtn.onclick = async ()=>{
+  collectFormData();
+  
+  if(!state.formData['Dog Name']){ 
+    showToast('Please enter a dog name'); 
+    return; 
+  }
+  
+  // Calculate final charges
+  const basePrice = parseFloat(state.formData['Base Price (SGD)']) || 0;
+  const discount = parseFloat(state.formData['Discount (%)']) || 0;
+  const finalCharge = basePrice * (1 - discount / 100);
+  state.formData['Charges (SGD)'] = finalCharge.toFixed(2);
+  
+  // Check package balance ONLY if package is selected
+  if (state.formData['Has Package'] === 'Yes') {
+    const currentBalance = parseFloat(state.formData['Package Balance']) || 0;
+    if (currentBalance < finalCharge) {
+      const shortAmount = (finalCharge - currentBalance).toFixed(2);
+      const confirmSave = confirm(
+        `⚠️ INSUFFICIENT PACKAGE BALANCE!\n\n` +
+        `Current Balance: ${currentBalance.toFixed(2)}\n` +
+        `Total Charges: ${finalCharge.toFixed(2)}\n` +
+        `Short by: ${shortAmount}\n\n` +
+        `The package balance will go to 0.00 and the remaining ${shortAmount} will need to be paid separately.\n\n` +
+        `Do you want to continue?`
+      );
+      if (!confirmSave) {
+        saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record';
+        saveBtn.disabled = false;
+        return;
       }
+      // Set balance to 0 if insufficient
+      state.formData['Package Balance'] = '0.00';
+    } else {
+      const newBalance = currentBalance - finalCharge;
+      state.formData['Package Balance'] = newBalance.toFixed(2);
+    }
+  } else {
+    // If "Has Package" is "No", make sure package balance is not deducted
+    // but keep the value as is (don't change it)
+    // The balance should remain as entered manually
+  }
+  
+  saveBtn.textContent = 'Saving…'; 
+  saveBtn.disabled = true;
+  
+  try{
+    let result;
+    if(state.editingId){
+      await apiUpdate(state.editingId, state.formData);
+      showToast('Record updated');
+      state.detailId = state.editingId;
+    }else{
+      result = await apiCreate(state.formData);
+      state.editingId = result.id;
+      state.detailId = result.id;
+      showToast('Record created!');
     }
     
-    saveBtn.textContent = 'Saving…'; 
-    saveBtn.disabled = true;
-    
-    try{
-      let result;
-      if(state.editingId){
-        await apiUpdate(state.editingId, state.formData);
-        showToast('Record updated');
-        state.detailId = state.editingId;
-      }else{
-        result = await apiCreate(state.formData);
-        state.editingId = result.id;
-        state.detailId = result.id;
-        showToast('Record created!');
-      }
-      
-      await refreshRecords();
-      state.tab = 'detail';
-      render();
-    }catch(err){
-      showToast('Could not save — check connection');
-      console.error(err);
-      saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record'; 
-      saveBtn.disabled = false;
-    }
-  };
+    await refreshRecords();
+    state.tab = 'detail';
+    render();
+  }catch(err){
+    showToast('Could not save — check connection');
+    console.error(err);
+    saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record'; 
+    saveBtn.disabled = false;
+  }
+};
 }
 
 function collectFormData(){
