@@ -747,104 +747,42 @@ function renderDetail(){
     </div></div>`;
   }
   
-  const photos = (r['Photos'] || '').split(',').map(function(url) { 
-    return url.trim(); 
-  }).filter(Boolean);
-  
-  let html = `<div class="card">
-    <div class="detail-header">
-      <div>
-        <h2>${esc(r['Dog Name']||'Unnamed')}</h2>
-        <div class="sub">${esc(r['Owner Name']||'')} · Groomed ${esc(r['Date of Grooming']||'—')}</div>
+  // In renderDetail(), update the photos section
+const photos = (r['Photos'] || '').split(',').map(function(url) { 
+  return url.trim(); 
+}).filter(Boolean);
+
+console.log('Photos URLs:', photos); // Debug: Check what URLs are stored
+
+// Then the photo gallery - with better image handling
+<div id="photoGallery" style="display:${photos.length > 0 ? 'flex' : 'none'};flex-wrap:wrap;gap:12px;margin-top:12px;">
+  ${photos.map((url, index) => {
+    // Clean the URL
+    var cleanUrl = url.trim();
+    if (cleanUrl && !cleanUrl.startsWith('http')) {
+      cleanUrl = 'https://' + cleanUrl;
+    }
+    // Check if it's a Google Drive URL
+    var isDriveUrl = cleanUrl.includes('drive.google.com') || cleanUrl.includes('googleusercontent.com');
+    return `
+      <div class="photo-thumbnail" style="position:relative;width:120px;height:120px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:#f5f5f5;display:flex;align-items:center;justify-content:center;">
+        ${isDriveUrl ? `
+          <img src="${esc(cleanUrl)}" 
+               style="width:100%;height:100%;object-fit:cover;" 
+               onclick="window.open('${esc(cleanUrl)}', '_blank')" 
+               onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\\'padding:20px;text-align:center;color:#999;font-size:12px;\\'>📷<br>Photo ${index + 1}</div>'">
+        ` : `
+          <div style="padding:20px;text-align:center;color:#999;font-size:12px;">
+            📷<br>Photo ${index + 1}
+            <div style="font-size:9px;color:#ccc;word-break:break-all;">${cleanUrl.substring(0, 30)}...</div>
+          </div>
+        `}
+        <button type="button" class="remove-btn" data-url="${esc(cleanUrl)}" style="position:absolute;top:4px;right:4px;background:var(--clay);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:14px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;z-index:5;">×</button>
+        <div class="photo-number" style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.6);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;z-index:5;">${index + 1}/5</div>
       </div>
-      <div class="detail-actions">
-        <button class="btn secondary" id="exportPdfBtn">Export as PDF</button>
-        <button class="btn secondary" id="editBtn">Edit</button>
-        <button class="btn danger" id="deleteBtn">Delete</button>
-      </div>
-    </div>
-    <div class="detail-grid">
-      ${item('Breed', r['Breed'])}
-      ${tagItem('Gender', 'Gender', GENDER.options)}
-      ${item('Weight (kg)', r['Weight (kg)'])}
-      ${tagItem('Service Required', 'Service Required', SERVICE.options)}
-      ${item('Base Price (SGD)', r['Base Price (SGD)'] ? r['Base Price (SGD)'] : (r['Charges (SGD)'] ? r['Charges (SGD)'] : ''))}
-      ${item('Discount', r['Discount (%)'] ? r['Discount (%)'] + '%' : '')}
-      ${item('Discount Notes', r['Discount Notes'] || '')}
-      ${item('Final Charges (SGD)', r['Charges (SGD)'] ? r['Charges (SGD)'] : '')}
-      ${item('Has Package', r['Has Package'] || 'No')}
-      ${item('Package Type', r['Package Type'] || '')}
-      ${item('Package Balance (SGD)', r['Package Balance'] ? r['Package Balance'] : '')}
-    </div>
-    <div class="section" style="padding-top:6px;">
-      <div class="section-title"><span class="num">01</span><h2>Pre-Assessment</h2></div>
-      <div class="detail-grid">
-        ${PRE_ASSESSMENT.map(cat => `
-          ${tagItem(cat.label, cat.key, cat.options)}
-          ${r[cat.key+' Notes'] ? `<div class="detail-item"><label>${esc(cat.label)} Notes</label><div class="val">${esc(r[cat.key+' Notes'])}</div></div>` : ''}
-        `).join('')}
-        ${tagItem('Mats', 'Mats', MATS.options)}
-      </div>
-    </div>
-    <div class="section">
-      <div class="section-title"><span class="num">02</span><h2>Temperament &amp; Notes</h2></div>
-      <div class="detail-grid">
-        ${tagItem('Temperament', 'Temperament', TEMPERAMENT.options)}
-        ${item('Shampoo Used', r['Shampoo Used'])}
-      </div>
-      ${item('Specific Request / Style Notes', r['Style Notes'])}
-      ${item('Additional Notes', r['Additional Notes'])}
-    </div>
-    ${(() => {
-      const history = findDogHistory(r['Dog Name'], r['Owner Name'], r['Record ID']);
-      if(history.length === 0) return '';
-      return `<div class="section" style="padding-top:6px;">
-        <div class="section-title"><span class="num">03</span><h2>Visit History</h2></div>
-        ${history.map(h=>`
-          <div class="record-tag history-row" data-id="${esc(h['Record ID'])}" style="margin-bottom:8px;">
-            <span class="punch"></span>
-            <div class="info">
-              <div class="dog">${esc(h['Service Required']||'Visit')}</div>
-              <div class="meta">${esc(h['Temperament']||'—')}${h['Style Notes'] ? ' · '+esc(h['Style Notes']) : ''}</div>
-            </div>
-            <div class="date">${esc(h['Date of Grooming']||'')}${h['Charges (SGD)'] ? +esc(h['Charges (SGD)']) : ''}</div>
-          </div>`).join('')}
-      </div>`;
-    })()}
-    <div class="section">
-      <div class="section-title"><span class="num">04</span><h2>Photos</h2></div>
-      <div style="background:var(--sage-soft);border:1px solid var(--sage);border-radius:var(--radius);padding:14px 16px;margin-bottom:16px;">
-        <div style="font-size:13px;color:var(--sage);">
-          💡 <strong>Note:</strong> Please save the record first before uploading photos. Maximum 5 photos.
-        </div>
-      </div>
-      
-      <div class="photo-upload-area" id="photoUploadArea">
-        <div style="font-size:32px;">📷</div>
-        <div style="font-size:13px;color:var(--ink-soft);margin:8px 0;">Click or drag photos here</div>
-        <div style="font-size:11px;color:var(--ink-soft);">Maximum 5 photos (JPG, PNG, GIF)</div>
-        <div class="upload-progress">Uploading...</div>
-        <input type="file" id="photoInput" multiple accept="image/*" style="display:none;">
-      </div>
-      
-      <div id="photoGallery" style="display:${photos.length > 0 ? 'flex' : 'none'};flex-wrap:wrap;gap:12px;margin-top:12px;">
-        ${photos.map((url, index) => {
-          var cleanUrl = url.trim();
-          if (cleanUrl && !cleanUrl.startsWith('http')) {
-            cleanUrl = 'https://' + cleanUrl;
-          }
-          return `
-            <div class="photo-thumbnail" style="position:relative;width:120px;height:120px;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:#f5f5f5;display:flex;align-items:center;justify-content:center;">
-              <img src="${esc(cleanUrl)}" 
-                   style="width:100%;height:100%;object-fit:cover;" 
-                   onclick="window.open('${esc(cleanUrl)}', '_blank')" 
-                   onerror="this.style.display='none';this.parentElement.innerHTML='<div style=\\'padding:20px;text-align:center;color:#999;font-size:12px;\\'>📷<br>Photo ${index + 1}</div>'">
-              <button type="button" class="remove-btn" data-url="${esc(cleanUrl)}" style="position:absolute;top:4px;right:4px;background:var(--clay);color:#fff;border:none;border-radius:50%;width:24px;height:24px;font-size:14px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;z-index:5;">×</button>
-              <div class="photo-number" style="position:absolute;bottom:4px;right:4px;background:rgba(0,0,0,0.6);color:#fff;font-size:10px;padding:2px 6px;border-radius:10px;z-index:5;">${index + 1}/5</div>
-            </div>
-          `;
-        }).join('')}
-      </div>
+    `;
+  }).join('')}
+</div>
       ${photos.length === 0 ? `<div style="text-align:center;color:var(--ink-soft);font-size:13px;padding:20px 0;">No photos uploaded yet</div>` : ''}
       <div style="font-size:11px;color:var(--ink-soft);margin-top:8px;">${photos.length}/5 photos used</div>
     </div>
@@ -1484,6 +1422,7 @@ function setupPhotoUpload() {
 
 function getOwnerPackageBalance(ownerName) {
   if (!ownerName) return Promise.resolve(null);
+  console.log('Fetching package balance for owner:', ownerName);
   return fetch(APPS_SCRIPT_URL, {
     method: 'POST',
     body: JSON.stringify({
@@ -1491,8 +1430,12 @@ function getOwnerPackageBalance(ownerName) {
       ownerName: ownerName
     })
   })
-  .then(function(res) { return res.json(); })
+  .then(function(res) { 
+    console.log('Response status:', res.status);
+    return res.json(); 
+  })
   .then(function(result) {
+    console.log('Package balance result:', result);
     if (result.success && result.packageInfo && result.packageInfo.hasPackage) {
       return result.packageInfo;
     }
@@ -1676,45 +1619,79 @@ function attachHandlers(){
   }
 
   const saveBtn = document.getElementById('saveFormBtn');
-  if(saveBtn) saveBtn.onclick = async ()=>{
-    collectFormData();
+if(saveBtn) saveBtn.onclick = async ()=>{
+  collectFormData();
+  
+  if(!state.formData['Dog Name']){ 
+    showToast('Please enter a dog name'); 
+    return; 
+  }
+  
+  // Calculate final charges
+  const basePrice = parseFloat(state.formData['Base Price (SGD)']) || 0;
+  const discount = parseFloat(state.formData['Discount (%)']) || 0;
+  const finalCharge = basePrice * (1 - discount / 100);
+  state.formData['Charges (SGD)'] = finalCharge.toFixed(2);
+  
+  // Check package balance if package is selected
+  if (state.formData['Has Package'] === 'Yes') {
+    const currentBalance = parseFloat(state.formData['Package Balance']) || 0;
     
-    if(!state.formData['Dog Name']){ 
-      showToast('Please enter a dog name'); 
-      return; 
-    }
-    
-    const basePrice = parseFloat(state.formData['Base Price (SGD)']) || 0;
-    const discount = parseFloat(state.formData['Discount (%)']) || 0;
-    const finalCharge = basePrice * (1 - discount / 100);
-    state.formData['Charges (SGD)'] = finalCharge.toFixed(2);
-    
-    saveBtn.textContent = 'Saving…'; 
-    saveBtn.disabled = true;
-    
-    try{
-      let result;
-      if(state.editingId){
-        await apiUpdate(state.editingId, state.formData);
-        showToast('Record updated');
-        state.detailId = state.editingId;
-      }else{
-        result = await apiCreate(state.formData);
-        state.editingId = result.id;
-        state.detailId = result.id;
-        showToast('Record created!');
-      }
+    // Check if charges exceed balance
+    if (currentBalance < finalCharge) {
+      const shortAmount = (finalCharge - currentBalance).toFixed(2);
+      const confirmMessage = 
+        '⚠️ INSUFFICIENT PACKAGE BALANCE!\n\n' +
+        'Current Package Balance: ' + currentBalance.toFixed(2) + '\n' +
+        'Total Charges: ' + finalCharge.toFixed(2) + '\n' +
+        'Short by: ' + shortAmount + '\n\n' +
+        'Options:\n' +
+        '1. Click "OK" to continue - Balance will go to 0.00 and the remaining ' + shortAmount + ' will be charged separately.\n' +
+        '2. Click "Cancel" to go back and adjust the charges or reload credit.\n\n' +
+        '💡 Tip: You can reload the package by updating the Package Balance field.';
       
-      await refreshRecords();
-      state.tab = 'detail';
-      render();
-    }catch(err){
-      showToast('Could not save — check connection');
-      console.error(err);
-      saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record'; 
-      saveBtn.disabled = false;
+      const confirmSave = confirm(confirmMessage);
+      if (!confirmSave) {
+        saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record';
+        saveBtn.disabled = false;
+        return;
+      }
+      // Set balance to 0 if insufficient
+      state.formData['Package Balance'] = '0.00';
+      showToast('Package balance depleted. Remaining ' + shortAmount + ' charged separately.');
+    } else {
+      const newBalance = currentBalance - finalCharge;
+      state.formData['Package Balance'] = newBalance.toFixed(2);
+      showToast('Package balance updated: ' + newBalance.toFixed(2));
     }
-  };
+  }
+  
+  saveBtn.textContent = 'Saving…'; 
+  saveBtn.disabled = true;
+  
+  try{
+    let result;
+    if(state.editingId){
+      await apiUpdate(state.editingId, state.formData);
+      showToast('Record updated');
+      state.detailId = state.editingId;
+    }else{
+      result = await apiCreate(state.formData);
+      state.editingId = result.id;
+      state.detailId = result.id;
+      showToast('Record created!');
+    }
+    
+    await refreshRecords();
+    state.tab = 'detail';
+    render();
+  }catch(err){
+    showToast('Could not save — check connection');
+    console.error(err);
+    saveBtn.textContent = state.editingId ? 'Save Changes' : 'Save Record'; 
+    saveBtn.disabled = false;
+  }
+};
 }
 
 function collectFormData(){
