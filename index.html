@@ -548,7 +548,8 @@ let state = {
   editingId:null, 
   formData:{}, 
   detailId:null,
-  revenueView:'monthly'
+  revenueView:'monthly',
+  revenueFilter: { owner: 'All', month: 'All' }  // ADD THIS LINE
 };
 
 function initBranding(){
@@ -873,11 +874,33 @@ function renderDetail(){
 }
 
 function renderRevenue(){
-  // Build monthly data
+  // --- FILTERS ---
+  // Get unique owners and months for filter dropdowns
+  var allOwners = [...new Set(state.records.map(function(r) { return r['Owner Name'] || 'Unknown'; }))].sort();
+  var allMonths = [...new Set(state.records.map(function(r) { 
+    var dateStr = r['Date of Grooming'] || '';
+    return dateStr ? dateStr.slice(0, 7) : null; 
+  }).filter(Boolean))].sort().reverse();
+  
+  // Initialize filter state if not exists
+  if (!state.revenueFilter) {
+    state.revenueFilter = { owner: 'All', month: 'All' };
+  }
+
+  // --- FILTER RECORDS ---
+  var filteredRecords = state.records.filter(function(r) {
+    var ownerMatch = state.revenueFilter.owner === 'All' || (r['Owner Name'] || 'Unknown') === state.revenueFilter.owner;
+    var dateStr = r['Date of Grooming'] || '';
+    var monthKey = dateStr ? dateStr.slice(0, 7) : null;
+    var monthMatch = state.revenueFilter.month === 'All' || monthKey === state.revenueFilter.month;
+    return ownerMatch && monthMatch;
+  });
+
+  // --- BUILD MONTHLY DATA ---
   const byMonth = {};
   let grossTotal = 0, discountTotal = 0, netTotal = 0, packageTotal = 0, cashTotal = 0, grandCount = 0;
 
-  state.records.forEach(r => {
+  filteredRecords.forEach(r => {
     const basePrice = parseFloat(r['Base Price (SGD)']) || 0;
     const charge = parseFloat(r['Charges (SGD)']) || 0;
     const gross = basePrice > 0 ? basePrice : charge;
@@ -902,9 +925,9 @@ function renderRevenue(){
 
   const months = Object.keys(byMonth).filter(k => k !== 'unspecified').sort().reverse();
 
-  // Build owner data
+  // --- BUILD OWNER DATA ---
   const ownerMap = {};
-  state.records.forEach(function(r) {
+  filteredRecords.forEach(function(r) {
     var owner = r['Owner Name'] || 'Unknown';
     if (!ownerMap[owner]) {
       ownerMap[owner] = {
@@ -941,10 +964,35 @@ function renderRevenue(){
 
   var owners = Object.keys(ownerMap).sort();
 
-  // --- START BUILDING HTML ---
+  // --- BUILD HTML ---
   let html = '';
 
-  // Toggle Buttons
+  // Filter Controls
+  html += `<div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:center;background:var(--card);padding:14px 18px;border:1px solid var(--line);border-radius:var(--radius);">
+    <div style="display:flex;align-items:center;gap:6px;">
+      <label style="font-size:12px;color:var(--ink-soft);">👤 Owner:</label>
+      <select id="ownerFilter" style="padding:6px 10px;border:1px solid var(--line);border-radius:var(--radius);background:#fff;font-size:13px;">
+        <option value="All" ${state.revenueFilter.owner === 'All' ? 'selected' : ''}>All Owners</option>
+        ${allOwners.map(function(o) {
+          return `<option value="${esc(o)}" ${state.revenueFilter.owner === o ? 'selected' : ''}>${esc(o)}</option>`;
+        }).join('')}
+      </select>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;">
+      <label style="font-size:12px;color:var(--ink-soft);">📅 Month:</label>
+      <select id="monthFilter" style="padding:6px 10px;border:1px solid var(--line);border-radius:var(--radius);background:#fff;font-size:13px;">
+        <option value="All" ${state.revenueFilter.month === 'All' ? 'selected' : ''}>All Months</option>
+        ${allMonths.map(function(m) {
+          var label = new Date(m + '-01').toLocaleDateString('en-US', { month:'long', year:'numeric' });
+          return `<option value="${esc(m)}" ${state.revenueFilter.month === m ? 'selected' : ''}>${esc(label)}</option>`;
+        }).join('')}
+      </select>
+    </div>
+    <button class="btn secondary" id="clearFiltersBtn" style="padding:6px 14px;font-size:12px;">Clear Filters</button>
+    <span style="font-size:12px;color:var(--ink-soft);margin-left:auto;">${grandCount} record${grandCount !== 1 ? 's' : ''} shown</span>
+  </div>`;
+
+  // Toggle Buttons (Monthly / By Owner)
   html += `<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
     <button class="btn ${state.revenueView === 'monthly' ? '' : 'secondary'}" id="viewMonthlyBtn">📊 Monthly</button>
     <button class="btn ${state.revenueView === 'owner' ? '' : 'secondary'}" id="viewOwnerBtn">👤 By Owner</button>
@@ -952,22 +1000,22 @@ function renderRevenue(){
 
   // Monthly View
   if (state.revenueView === 'monthly') {
-    html += `<div class="revenue-summary cols-4">
-      <div class="stat"><div class="eyebrow">Gross Charges</div><div class="num">${grossTotal.toFixed(2)}</div></div>
-      <div class="stat"><div class="eyebrow">Discounts Given</div><div class="num clay">-${discountTotal.toFixed(2)}</div></div>
-      <div class="stat"><div class="eyebrow">Net Received</div><div class="num" style="color:var(--sage);">${netTotal.toFixed(2)}</div></div>
-      <div class="stat"><div class="eyebrow">Total Grooms</div><div class="num">${grandCount}</div></div>
-    </div>
-    <div style="font-size:12px;color:var(--ink-soft);margin:-14px 0 20px;">
-      Net Received = Gross Charges − Discounts Given, and includes ${packageTotal.toFixed(2)} drawn from prepaid packages alongside ${cashTotal.toFixed(2)} paid directly.
-    </div>`;
-
-    if(months.length === 0 && !byMonth['unspecified']){
+    if (grandCount === 0) {
       html += `<div class="card empty-state"><div class="stamp">犬</div>
-        <div style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:6px;">No revenue yet</div>
-        <div>Charges you record against each groom will roll up here by month.</div>
+        <div style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:6px;">No records match the selected filters</div>
+        <div>Try changing the Owner or Month filter above.</div>
       </div>`;
     } else {
+      html += `<div class="revenue-summary cols-4">
+        <div class="stat"><div class="eyebrow">Gross Charges</div><div class="num">${grossTotal.toFixed(2)}</div></div>
+        <div class="stat"><div class="eyebrow">Discounts Given</div><div class="num clay">-${discountTotal.toFixed(2)}</div></div>
+        <div class="stat"><div class="eyebrow">Net Received</div><div class="num" style="color:var(--sage);">${netTotal.toFixed(2)}</div></div>
+        <div class="stat"><div class="eyebrow">Total Grooms</div><div class="num">${grandCount}</div></div>
+      </div>
+      <div style="font-size:12px;color:var(--ink-soft);margin:-14px 0 20px;">
+        Net Received = Gross Charges − Discounts Given, and includes ${packageTotal.toFixed(2)} drawn from prepaid packages alongside ${cashTotal.toFixed(2)} paid directly.
+      </div>`;
+
       html += `<div class="card" style="overflow-x:auto;">
         <table style="width:100%;border-collapse:collapse;font-size:13px;">
           <thead><tr style="border-bottom:1px solid var(--line);text-align:left;">
@@ -1014,8 +1062,8 @@ function renderRevenue(){
   if (state.revenueView === 'owner') {
     if (owners.length === 0) {
       html += `<div class="card empty-state"><div class="stamp">犬</div>
-        <div style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:6px;">No customer data yet</div>
-        <div>Records will appear here once you have grooming history.</div>
+        <div style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:6px;">No customer data matches the selected filters</div>
+        <div>Try changing the Owner or Month filter above.</div>
       </div>`;
     } else {
       html += `<div class="card" style="overflow-x:auto;">
@@ -1542,6 +1590,7 @@ function getOwnerPackageBalance(ownerName) {
 }
 
 function attachHandlers(){
+  // Tab navigation
   document.querySelectorAll('nav.tabs button').forEach(b=>{
     b.onclick = ()=>{
       if(b.dataset.tab === 'form'){ state.formData = {}; state.editingId = null; state.tab = 'form'; }
@@ -1550,9 +1599,11 @@ function attachHandlers(){
     };
   });
 
+  // New Record button
   const newBtn = document.getElementById('newRecordBtn');
   if(newBtn) newBtn.onclick = ()=>{ state.formData = {}; state.editingId = null; state.tab = 'form'; render(); };
 
+  // Search input handler
   const searchInput = document.getElementById('searchInput');
   if(searchInput){
     searchInput.oninput = (e)=>{ 
@@ -1575,16 +1626,19 @@ function attachHandlers(){
     };
   }
 
+  // Record tags (click to view detail)
   document.querySelectorAll('.record-tag').forEach(el=>{
     el.onclick = ()=>{ state.detailId = el.dataset.id; state.tab = 'detail'; render(); };
   });
 
+  // Export PDF button
   const exportBtn = document.getElementById('exportPdfBtn');
   if(exportBtn) exportBtn.onclick = ()=>{
     const r = state.records.find(x=>x['Record ID']===state.detailId);
     if(r) exportRecordAsPdf(r);
   };
 
+  // Edit button
   const editBtn = document.getElementById('editBtn');
   if(editBtn) editBtn.onclick = ()=>{
     const r = state.records.find(x=>x['Record ID']===state.detailId);
@@ -1593,6 +1647,8 @@ function attachHandlers(){
     state.tab = 'edit';
     render();
   };
+
+  // Delete button
   const deleteBtn = document.getElementById('deleteBtn');
   if(deleteBtn) deleteBtn.onclick = async ()=>{
     if(!confirm('Delete this record? This cannot be undone.')) return;
@@ -1604,6 +1660,7 @@ function attachHandlers(){
     }catch(err){ showToast('Could not delete'); console.error(err); }
   };
 
+  // Pill groups (Temperament supports multiple selections)
   document.querySelectorAll('.pill-group').forEach(group=>{
     group.querySelectorAll('.pill').forEach(pill=>{
       pill.onclick = ()=>{
@@ -1622,6 +1679,7 @@ function attachHandlers(){
     });
   });
 
+  // Package toggle
   document.querySelectorAll('.package-toggle').forEach(btn=>{
     btn.onclick = ()=>{
       collectFormData();
@@ -1643,6 +1701,7 @@ function attachHandlers(){
     };
   });
 
+  // Shampoo options
   document.querySelectorAll('.shampoo-option').forEach(opt=>{
     opt.onclick = ()=>{
       collectFormData();
@@ -1654,9 +1713,13 @@ function attachHandlers(){
     };
   });
 
+  // Setup pricing handlers
   setupPricingHandlers();
+  
+  // Setup photo upload
   setupPhotoUpload();
 
+  // Cancel button
   const cancelBtn = document.getElementById('cancelFormBtn');
   if(cancelBtn) cancelBtn.onclick = function(){ 
     state.tab = state.editingId ? 'detail' : 'list'; 
@@ -1712,6 +1775,7 @@ function attachHandlers(){
     };
   }
 
+  // Save button
   const saveBtn = document.getElementById('saveFormBtn');
   if(saveBtn) saveBtn.onclick = async ()=>{
     collectFormData();
@@ -1769,7 +1833,43 @@ function attachHandlers(){
     }
   };
 
-  // Revenue view toggle
+  // ------------------------------
+  // REVENUE FILTER HANDLERS
+  // ------------------------------
+  const ownerFilter = document.getElementById('ownerFilter');
+  const monthFilter = document.getElementById('monthFilter');
+  const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+
+  if (ownerFilter) {
+    ownerFilter.onchange = function() {
+      state.revenueFilter.owner = this.value;
+      render();
+    };
+  }
+
+  if (monthFilter) {
+    monthFilter.onchange = function() {
+      state.revenueFilter.month = this.value;
+      render();
+    };
+  }
+
+  if (clearFiltersBtn) {
+    clearFiltersBtn.onclick = function() {
+      state.revenueFilter.owner = 'All';
+      state.revenueFilter.month = 'All';
+      // Update the select elements to reflect the reset
+      const ownerSelect = document.getElementById('ownerFilter');
+      const monthSelect = document.getElementById('monthFilter');
+      if (ownerSelect) ownerSelect.value = 'All';
+      if (monthSelect) monthSelect.value = 'All';
+      render();
+    };
+  }
+
+  // ------------------------------
+  // REVENUE VIEW TOGGLE HANDLERS
+  // ------------------------------
   const viewMonthlyBtn = document.getElementById('viewMonthlyBtn');
   const viewOwnerBtn = document.getElementById('viewOwnerBtn');
 
