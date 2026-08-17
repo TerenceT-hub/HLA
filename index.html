@@ -817,14 +817,16 @@ function renderDetail(){
       </div>
       
       <div id="photoGallery" style="display:${photos.length > 0 ? 'flex' : 'none'};flex-wrap:wrap;gap:12px;margin-top:12px;">
-        ${photos.map((url, index) => `
-          <div class="photo-thumbnail">
-            <img src="${esc(url)}" onclick="window.open('${esc(url)}', '_blank')" onerror="this.parentElement.style.display='none'">
-            <button type="button" class="remove-btn" data-url="${esc(url)}">×</button>
-            <div class="photo-number">${index + 1}/5</div>
-          </div>
-        `).join('')}
-      </div>
+  ${photos.map((url, index) => `
+    <div class="photo-thumbnail">
+      <img src="${esc(url)}?t=${new Date().getTime()}" 
+           onclick="window.open('${esc(url)}', '_blank')" 
+           onerror="this.parentElement.style.display='none'">
+      <button type="button" class="remove-btn" data-url="${esc(url)}">×</button>
+      <div class="photo-number">${index + 1}/5</div>
+    </div>
+  `).join('')}
+</div>
       ${photos.length === 0 ? `<div style="text-align:center;color:var(--ink-soft);font-size:13px;padding:20px 0;">No photos uploaded yet</div>` : ''}
       <div style="font-size:11px;color:var(--ink-soft);margin-top:8px;">${photos.length}/5 photos used</div>
     </div>
@@ -1112,15 +1114,16 @@ function exportRecordAsPdf(r){
     <div class="p-charge"><span>Total Charges (SGD)</span><span>${finalCharge.toFixed(2)}</span></div>
     
     ${photos.length > 0 ? `
-      <h3>Photos</h3>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:10px;margin-top:10px;">
-        ${photos.map(url => `
-          <div style="border:1px solid #ddd;border-radius:4px;overflow:hidden;page-break-inside:avoid;">
-            <img src="${esc(url)}" style="width:100%;height:150px;object-fit:cover;" onerror="this.style.display='none'">
-          </div>
-        `).join('')}
+  <h3>Photos</h3>
+  <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));gap:10px;margin-top:10px;">
+    ${photos.map(url => `
+      <div style="border:1px solid #ddd;border-radius:4px;overflow:hidden;page-break-inside:avoid;">
+        <img src="${esc(url)}" style="width:100%;height:150px;object-fit:cover;" 
+             onerror="this.parentElement.innerHTML='<div style=\\'padding:20px;text-align:center;color:#999;\\'>Photo unavailable</div>'">
       </div>
-    ` : '<p style="color:#999;font-size:12px;">No photos attached</p>'}
+    `).join('')}
+  </div>
+` : '<p style="color:#999;font-size:12px;">No photos attached</p>'}
     
     <div class="p-footer">${esc(BUSINESS_NAME)} | More than a haircut - A calm and comfortable grooming experience.</div>
   </div>`;
@@ -1647,9 +1650,13 @@ if(saveBtn) saveBtn.onclick = async ()=>{
   const finalCharge = basePrice * (1 - discount / 100);
   state.formData['Charges (SGD)'] = finalCharge.toFixed(2);
   
-  // Check package balance ONLY if package is selected
+  // Deduct from package balance if "Has Package" is "Yes"
   if (state.formData['Has Package'] === 'Yes') {
     const currentBalance = parseFloat(state.formData['Package Balance']) || 0;
+    const newBalance = Math.max(0, currentBalance - finalCharge);
+    state.formData['Package Balance'] = newBalance.toFixed(2);
+    
+    // Show warning if insufficient
     if (currentBalance < finalCharge) {
       const shortAmount = (finalCharge - currentBalance).toFixed(2);
       const confirmSave = confirm(
@@ -1665,16 +1672,7 @@ if(saveBtn) saveBtn.onclick = async ()=>{
         saveBtn.disabled = false;
         return;
       }
-      // Set balance to 0 if insufficient
-      state.formData['Package Balance'] = '0.00';
-    } else {
-      const newBalance = currentBalance - finalCharge;
-      state.formData['Package Balance'] = newBalance.toFixed(2);
     }
-  } else {
-    // If "Has Package" is "No", make sure package balance is not deducted
-    // but keep the value as is (don't change it)
-    // The balance should remain as entered manually
   }
   
   saveBtn.textContent = 'Saving…'; 
