@@ -868,6 +868,69 @@ function renderList(){
   return html;
 }
 
+function renderRevenue(){
+  const byMonth = {};
+  let grandCharges = 0, grandCount = 0, grandPackageDraws = 0, grandNewRevenue = 0;
+
+  state.records.forEach(r => {
+    const charge = parseFloat(r['Charges (SGD)']) || 0;
+    const isPackage = r['Has Package'] === 'Yes';
+    const dateStr = r['Date of Grooming'] || '';
+    const monthKey = dateStr ? dateStr.slice(0, 7) : 'unspecified'; // YYYY-MM
+
+    if(!byMonth[monthKey]) byMonth[monthKey] = { total: 0, count: 0, packageDraws: 0, newRevenue: 0 };
+    byMonth[monthKey].total += charge;
+    byMonth[monthKey].count += 1;
+    if(isPackage){ byMonth[monthKey].packageDraws += charge; }
+    else { byMonth[monthKey].newRevenue += charge; }
+
+    grandCharges += charge;
+    grandCount += 1;
+    if(isPackage) grandPackageDraws += charge; else grandNewRevenue += charge;
+  });
+
+  const months = Object.keys(byMonth).filter(k => k !== 'unspecified').sort().reverse();
+
+  let html = `<div class="revenue-summary">
+    <div class="stat"><div class="eyebrow">New Revenue</div><div class="num">${grandNewRevenue.toFixed(2)}</div></div>
+    <div class="stat"><div class="eyebrow">Package Draws</div><div class="num clay">${grandPackageDraws.toFixed(2)}</div></div>
+    <div class="stat"><div class="eyebrow">Total Records</div><div class="num">${grandCount}</div></div>
+  </div>
+  <div style="font-size:12px;color:var(--ink-soft);margin:-14px 0 20px;">
+    "New Revenue" excludes visits paid from an existing package balance, since that money was already collected when the package was purchased.
+  </div>`;
+
+  if(months.length === 0 && !byMonth['unspecified']){
+    html += `<div class="card empty-state"><div class="stamp">犬</div>
+      <div style="font-family:'Shippori Mincho',serif;font-size:16px;margin-bottom:6px;">No revenue yet</div>
+      <div>Charges you record against each groom will roll up here by month.</div>
+    </div>`;
+    return html;
+  }
+
+  months.forEach(k => {
+    const m = byMonth[k];
+    const label = new Date(k + '-01').toLocaleDateString('en-US', { month:'long', year:'numeric' });
+    html += `<div class="month-row">
+      <div>
+        <div class="m-label">${esc(label)}</div>
+        <div class="m-meta">${m.count} record${m.count===1?'':'s'}${m.packageDraws > 0 ? ' · ' + m.packageDraws.toFixed(2) + ' from packages' : ''}</div>
+      </div>
+      <div class="m-total">${m.newRevenue.toFixed(2)}</div>
+    </div>`;
+  });
+
+  if(byMonth['unspecified']){
+    const m = byMonth['unspecified'];
+    html += `<div class="month-row">
+      <div><div class="m-label">Undated records</div><div class="m-meta">${m.count} record(s) without a grooming date</div></div>
+      <div class="m-total">${m.newRevenue.toFixed(2)}</div>
+    </div>`;
+  }
+
+  return html;
+}
+
 function exportRecordAsPdf(r){
   function row(label, val){
     return '<div><span class="k">' + esc(label) + '</span>' + (val ? esc(val) : '—') + '</div>';
