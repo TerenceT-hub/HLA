@@ -955,7 +955,8 @@ function renderRevenue(){
         cashPaid: 0,
         count: 0,
         packageBalance: 0,
-        packageType: ''
+        packageType: '',
+        packageTrail: []
       };
     }
     var base = parseFloat(r['Base Price (SGD)']) || 0;
@@ -970,14 +971,30 @@ function renderRevenue(){
     ownerMap[owner].count += 1;
     if (isPackage) {
       ownerMap[owner].packageUsed += charge;
+      ownerMap[owner].packageTrail.push({
+        date: r['Date of Grooming'] || '',
+        dogName: r['Dog Name'] || '',
+        charge: charge,
+        balanceAfter: parseFloat(r['Package Balance']) || 0,
+        packageType: r['Package Type'] || ''
+      });
     } else {
       ownerMap[owner].cashPaid += charge;
     }
-    if (isPackage) {
-      ownerMap[owner].packageBalance = parseFloat(r['Package Balance']) || 0;
-      ownerMap[owner].packageType = r['Package Type'] || '';
-    }
   });
+
+  // Sort each owner's trail chronologically, and take the CURRENT balance
+  // from the most recent entry — not just whichever record happened to be
+  // processed last, which previously gave a wrong (oldest-record) balance.
+  for (var ownerKey in ownerMap) {
+    var trail = ownerMap[ownerKey].packageTrail;
+    trail.sort(function(a, b){ return String(a.date).localeCompare(String(b.date)); });
+    if (trail.length > 0) {
+      var latest = trail[trail.length - 1];
+      ownerMap[ownerKey].packageBalance = latest.balanceAfter;
+      ownerMap[ownerKey].packageType = latest.packageType;
+    }
+  }
 
   var owners = Object.keys(ownerMap).sort();
 
@@ -1101,8 +1118,10 @@ function renderRevenue(){
 
       owners.forEach(function(owner) {
         var data = ownerMap[owner];
-        html += `<tr style="border-bottom:1px solid var(--line-soft);">
-          <td style="padding:12px 16px;font-weight:500;">${esc(owner)}</td>
+        var hasTrail = data.packageTrail.length > 0;
+        var isExpanded = state.expandedOwnerTrail === owner;
+        html += `<tr class="${hasTrail ? 'owner-trail-toggle' : ''}" data-owner="${esc(owner)}" style="border-bottom:1px solid var(--line-soft);${hasTrail ? 'cursor:pointer;' : ''}">
+          <td style="padding:12px 16px;font-weight:500;">${esc(owner)}${hasTrail ? ' <span style="color:var(--ink-soft);font-size:11px;">' + (isExpanded ? '▾' : '▸') + ' trail</span>' : ''}</td>
           <td style="padding:12px 16px;text-align:right;">${data.count}</td>
           <td style="padding:12px 16px;text-align:right;">${data.gross.toFixed(2)}</td>
           <td style="padding:12px 16px;text-align:right;color:var(--clay);">${data.discount > 0 ? '-' + data.discount.toFixed(2) : '—'}</td>
@@ -1112,6 +1131,32 @@ function renderRevenue(){
           <td style="padding:12px 16px;text-align:right;font-weight:600;color:${data.packageBalance > 0 ? 'var(--sage)' : 'var(--clay)'};">${data.packageBalance.toFixed(2)}</td>
           <td style="padding:12px 16px;font-size:12px;color:var(--ink-soft);">${esc(data.packageType) || '—'}</td>
         </tr>`;
+
+        if(isExpanded && hasTrail){
+          html += `<tr><td colspan="9" style="padding:0;background:var(--paper);">
+            <div style="padding:14px 20px;">
+              <div style="font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin-bottom:8px;">Package Trail — ${esc(owner)}</div>
+              <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+                <thead><tr style="text-align:left;color:var(--ink-soft);">
+                  <th style="padding:6px 10px;font-weight:500;">Date</th>
+                  <th style="padding:6px 10px;font-weight:500;">Dog</th>
+                  <th style="padding:6px 10px;font-weight:500;text-align:right;">Drawn</th>
+                  <th style="padding:6px 10px;font-weight:500;text-align:right;">Balance After</th>
+                </tr></thead>
+                <tbody>
+                  ${data.packageTrail.map(function(t){
+                    return `<tr style="border-top:1px solid var(--line-soft);">
+                      <td style="padding:6px 10px;">${esc(t.date || '—')}</td>
+                      <td style="padding:6px 10px;">${esc(t.dogName || '—')}</td>
+                      <td style="padding:6px 10px;text-align:right;color:var(--clay);">-${t.charge.toFixed(2)}</td>
+                      <td style="padding:6px 10px;text-align:right;font-weight:500;">${t.balanceAfter.toFixed(2)}</td>
+                    </tr>`;
+                  }).join('')}
+                </tbody>
+              </table>
+            </div>
+          </td></tr>`;
+        }
       });
 
       html += `</tbody></table></div>`;
@@ -1646,6 +1691,27 @@ function getOwnerPackageBalance(ownerName) {
   });
 }
 
+// Shared: looks up an owner's package and applies it to state.formData, then re-renders.
+// Used whenever the Owner Name becomes known — whether typed directly, or
+// filled in automatically from a matched Dog Name — so the package check
+// never depends on which field the groomer happens to fill in first.
+function refreshOwnerPackage(ownerName){
+  if(!ownerName) return;
+  getOwnerPackageBalance(ownerName).then(function(pkgInfo){
+    if(pkgInfo && pkgInfo.hasPackage){
+      state.formData['Has Package'] = 'Yes';
+      state.formData['Package Type'] = pkgInfo.packageType || '';
+      state.formData['Package Balance'] = pkgInfo.balance.toFixed(2);
+      showToast('Package balance loaded: ' + pkgInfo.balance.toFixed(2));
+    } else {
+      state.formData['Has Package'] = 'No';
+      state.formData['Package Balance'] = '';
+      state.formData['Package Type'] = '';
+    }
+    render();
+  });
+}
+
 function attachHandlers(){
   // Tab navigation
   document.querySelectorAll('nav.tabs button').forEach(b=>{
@@ -1742,17 +1808,9 @@ function attachHandlers(){
       collectFormData();
       const value = btn.dataset.package;
       state.formData['Has Package'] = value;
-      
+
       if (value === 'Yes' && state.formData['Owner Name']) {
-        getOwnerPackageBalance(state.formData['Owner Name']).then(pkgInfo => {
-          if (pkgInfo && pkgInfo.hasPackage) {
-            state.formData['Package Balance'] = pkgInfo.balance.toFixed(2);
-            state.formData['Package Type'] = pkgInfo.packageType || '';
-            render();
-          } else {
-            showToast('No existing package found. Please enter balance manually.');
-          }
-        });
+        refreshOwnerPackage(state.formData['Owner Name']);
       }
       render();
     };
@@ -1835,7 +1893,7 @@ if (topUpBtn && creditTopUpInput) {
     render(); 
   };
 
-  // Dog name change - only fill history
+  // Dog name change - fill history, and check package if this reveals a new owner
   const dogInput = document.getElementById('f_DogName');
   if(dogInput) {
     dogInput.onchange = function() {
@@ -1843,9 +1901,13 @@ if (topUpBtn && creditTopUpInput) {
       var history = findDogHistory(state.formData['Dog Name'], state.formData['Owner Name'], state.editingId);
       if(history.length){
         var latest = history[0];
-        if(!state.formData['Owner Name']) state.formData['Owner Name'] = latest['Owner Name'];
+        var ownerWasBlank = !state.formData['Owner Name'];
+        if(ownerWasBlank) state.formData['Owner Name'] = latest['Owner Name'];
         if(!state.formData['Breed']) state.formData['Breed'] = latest['Breed'];
         if(!state.formData['Gender']) state.formData['Gender'] = latest['Gender'];
+        if(ownerWasBlank && state.formData['Owner Name']){
+          refreshOwnerPackage(state.formData['Owner Name']);
+        }
       }
       render();
     };
@@ -1857,23 +1919,11 @@ if (topUpBtn && creditTopUpInput) {
     ownerInput.onchange = function() {
       collectFormData();
       var ownerName = state.formData['Owner Name'];
-      
+
       if (ownerName) {
-        getOwnerPackageBalance(ownerName).then(function(pkgInfo) {
-          if (pkgInfo && pkgInfo.hasPackage) {
-            state.formData['Has Package'] = 'Yes';
-            state.formData['Package Type'] = pkgInfo.packageType || '';
-            state.formData['Package Balance'] = pkgInfo.balance.toFixed(2);
-            showToast('Package balance loaded: ' + pkgInfo.balance.toFixed(2));
-          } else {
-            state.formData['Has Package'] = 'No';
-            state.formData['Package Balance'] = '';
-            state.formData['Package Type'] = '';
-          }
-          render();
-        });
+        refreshOwnerPackage(ownerName);
       }
-      
+
       var history = findDogHistory(state.formData['Dog Name'], state.formData['Owner Name'], state.editingId);
       if(history.length){
         var latest = history[0];
@@ -1995,6 +2045,14 @@ if (topUpBtn && creditTopUpInput) {
       render();
     };
   }
+
+  document.querySelectorAll('.owner-trail-toggle').forEach(function(row){
+    row.onclick = function(){
+      var owner = row.dataset.owner;
+      state.expandedOwnerTrail = (state.expandedOwnerTrail === owner) ? null : owner;
+      render();
+    };
+  });
 }
 
 function collectFormData(){
